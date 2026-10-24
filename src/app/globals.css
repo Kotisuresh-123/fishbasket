@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --brand-teal-50: #f0fdfa;
+    --brand-teal-100: #ccfbf1;
+    --brand-teal-200: #99f6e4;
+    --brand-teal-500: #14b8a6;
+    --brand-teal-600: #0d9488;
+    --brand-teal-700: #0f766e;
+    --brand-teal-800: #115e59;
+    --brand-teal-900: #134e4a;
+    --brand-navy-800: #112233;
+    --brand-navy-900: #0b1a26;
+    --brand-navy-950: #06111a;
+    --brand-coral: #ff6b4a;
+    --brand-coral-hover: #ea580c;
+  }
+
+  body {
+    color: #1e293b;
+    background-color: #f8fafc;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Badge Styles */
+.badge-fresh {
+  background: linear-gradient(135deg, #0d9488, #0f766e);
+  color: white;
+}
+
+.badge-offer {
+  background: linear-gradient(135deg, #ea580c, #f97316);
+  color: white;
+}
+
+/* Glass & Card subtle shadows */
+.card-hover {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -6px rgba(13, 148, 136, 0.12), 0 4px 8px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Safe area for mobile navigation */
+@media (max-width: 768px) {
+  .mobile-bottom-bar-padding {
+    padding-bottom: 74px;
+  }
+}
