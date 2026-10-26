@@ -59,7 +59,26 @@ const isTestEnv =
   process.env.VITEST === 'true' ||
   typeof (global as any).describe === 'function';
 
-const connectionString = process.env.DATABASE_URL || '';
+function getEffectiveConnectionString(): string {
+  const rawConn = process.env.DATABASE_URL || '';
+  if (!rawConn) return '';
+  // If direct IPv6 Supabase host is provided, route through official IPv4-compatible pooler
+  if (rawConn.includes('db.btcyracwqnveziwgphrz.supabase.co')) {
+    try {
+      const parsed = new URL(rawConn);
+      parsed.username = 'postgres.btcyracwqnveziwgphrz';
+      parsed.host = 'aws-0-ap-northeast-1.pooler.supabase.com:6543';
+      return parsed.toString();
+    } catch {
+      return rawConn
+        .replace('db.btcyracwqnveziwgphrz.supabase.co:5432', 'aws-0-ap-northeast-1.pooler.supabase.com:6543')
+        .replace('postgres:', 'postgres.btcyracwqnveziwgphrz:');
+    }
+  }
+  return rawConn;
+}
+
+const connectionString = getEffectiveConnectionString();
 
 if (!isTestEnv && !global.__fishbasket_pg_pool && connectionString) {
   global.__fishbasket_pg_pool = new Pool({
@@ -97,6 +116,14 @@ const LEGACY_TO_DB_MAP: Record<string, string> = {
   p11: 'd1000000-0000-0000-0000-000000000011',
   p12: 'd1000000-0000-0000-0000-000000000012',
   p13: 'd1000000-0000-0000-0000-000000000013',
+  c1: 'c1000000-0000-0000-0000-000000000001',
+  c2: 'c1000000-0000-0000-0000-000000000002',
+  c3: 'c1000000-0000-0000-0000-000000000003',
+  c4: 'c1000000-0000-0000-0000-000000000004',
+  c5: 'c1000000-0000-0000-0000-000000000005',
+  c6: 'c1000000-0000-0000-0000-000000000006',
+  c7: 'c1000000-0000-0000-0000-000000000007',
+  c8: 'c1000000-0000-0000-0000-000000000008',
   'ord-1001': 'e1000000-0000-0000-0000-000000000001',
   'ord-1002': 'e1000000-0000-0000-0000-000000000002',
   'ord-1003': 'e1000000-0000-0000-0000-000000000003',
@@ -554,13 +581,11 @@ export const dbService = {
         `SELECT id, email, full_name, display_name, phone, dock_location, role, status, avatar_url, created_at
          FROM profiles WHERE role = 'fisherman' ORDER BY created_at DESC`
       );
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          ...r,
-          id: toAppId(r.id),
-          created_at: new Date(r.created_at).toISOString(),
-        }));
-      }
+      return rows.map((r) => ({
+        ...r,
+        id: toAppId(r.id),
+        created_at: new Date(r.created_at).toISOString(),
+      }));
     } catch (err) {
       warnFallback('Database getFishermen fallback:', err);
     }
@@ -574,13 +599,11 @@ export const dbService = {
         `SELECT id, email, full_name, phone, vehicle_info, role, status, avatar_url, created_at
          FROM profiles WHERE role = 'delivery_partner' ORDER BY created_at DESC`
       );
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          ...r,
-          id: toAppId(r.id),
-          created_at: new Date(r.created_at).toISOString(),
-        }));
-      }
+      return rows.map((r) => ({
+        ...r,
+        id: toAppId(r.id),
+        created_at: new Date(r.created_at).toISOString(),
+      }));
     } catch (err) {
       warnFallback('Database getDeliveryPartners fallback:', err);
     }
@@ -663,25 +686,23 @@ export const dbService = {
       `;
 
       const rows = await queryDb(querySql, params);
-      if (rows.length > 0) {
-        return rows.map((c) => ({
-          id: toAppId(c.id),
-          role: c.role,
-          full_name: c.full_name || 'Customer',
-          email: c.email,
-          phone: c.phone || '',
-          created_at: new Date(c.created_at).toISOString(),
-          order_count: Number(c.order_count) || 0,
-          total_spend: Number(c.total_spend) || 0,
-          last_order_date: c.last_order_date ? new Date(c.last_order_date).toISOString() : undefined,
-          recent_orders: Array.isArray(c.orders)
-            ? c.orders.slice(0, 5).map((o: any) => ({ ...o, id: toAppId(o.id) }))
-            : [],
-          orders: Array.isArray(c.orders)
-            ? c.orders.map((o: any) => ({ ...o, id: toAppId(o.id) }))
-            : [],
-        }));
-      }
+      return rows.map((c) => ({
+        id: toAppId(c.id),
+        role: c.role,
+        full_name: c.full_name || 'Customer',
+        email: c.email,
+        phone: c.phone || '',
+        created_at: new Date(c.created_at).toISOString(),
+        order_count: Number(c.order_count) || 0,
+        total_spend: Number(c.total_spend) || 0,
+        last_order_date: c.last_order_date ? new Date(c.last_order_date).toISOString() : undefined,
+        recent_orders: Array.isArray(c.orders)
+          ? c.orders.slice(0, 5).map((o: any) => ({ ...o, id: toAppId(o.id) }))
+          : [],
+        orders: Array.isArray(c.orders)
+          ? c.orders.map((o: any) => ({ ...o, id: toAppId(o.id) }))
+          : [],
+      }));
     } catch (err) {
       warnFallback('Database getCustomers fallback to memory:', err);
     }
@@ -924,35 +945,33 @@ export const dbService = {
       }
 
       const rows = await queryDb(sql, values);
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          ...r,
-          id: toAppId(r.id),
-          fisherman_id: r.fisherman_id ? toAppId(r.fisherman_id) : undefined,
-          variants: [
-            {
-              id: 'var_' + toAppId(r.id),
-              product_id: toAppId(r.id),
-              variant_name: `1 ${r.unit} Pack`,
-              weight_grams: r.unit === 'kg' ? 1000 : 500,
-              price: r.price_per_unit,
-              discount_price: r.discount_price,
-              stock_quantity: r.stock_quantity,
-            },
-          ],
-          preparation_options: [
-            {
-              id: 'prep_' + toAppId(r.id),
-              product_id: toAppId(r.id),
-              name: 'Curry Cut',
-              description: 'Cleaned, descaled and cut into pieces for curry.',
-              extra_price: 0,
-              est_weight_loss_percent: 25,
-              is_default: true,
-            },
-          ],
-        }));
-      }
+      return rows.map((r) => ({
+        ...r,
+        id: toAppId(r.id),
+        fisherman_id: r.fisherman_id ? toAppId(r.fisherman_id) : undefined,
+        variants: [
+          {
+            id: 'var_' + toAppId(r.id),
+            product_id: toAppId(r.id),
+            variant_name: `1 ${r.unit} Pack`,
+            weight_grams: r.unit === 'kg' ? 1000 : 500,
+            price: r.price_per_unit,
+            discount_price: r.discount_price,
+            stock_quantity: r.stock_quantity,
+          },
+        ],
+        preparation_options: [
+          {
+            id: 'prep_' + toAppId(r.id),
+            product_id: toAppId(r.id),
+            name: 'Curry Cut',
+            description: 'Cleaned, descaled and cut into pieces for curry.',
+            extra_price: 0,
+            est_weight_loss_percent: 25,
+            is_default: true,
+          },
+        ],
+      }));
     } catch (err) {
       warnFallback('Database getProducts fallback to memory:', err);
     }
@@ -1124,6 +1143,16 @@ export const dbService = {
 
     const newId = crypto.randomUUID();
     const isAvail = newProduct.stock_quantity > 0 ? (newProduct.is_available ?? true) : false;
+    const cleanName = (newProduct.name || 'Seafood Catch').trim();
+    const slug = newProduct.slug || (
+      cleanName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') +
+      '-' +
+      Math.floor(1000 + Math.random() * 9000)
+    );
+    const dbCategoryId = toDbId(newProduct.category_id);
 
     try {
       const rows = await queryDb(
@@ -1140,11 +1169,11 @@ export const dbService = {
         ) RETURNING *`,
         [
           newId,
-          newProduct.category_id,
+          dbCategoryId,
           fishermanDbId || (newProduct.fisherman_id ? toDbId(newProduct.fisherman_id) : null),
           sellerName,
-          newProduct.name,
-          newProduct.slug,
+          cleanName,
+          slug,
           newProduct.variety_species || null,
           newProduct.origin_source || 'Visakhapatnam Harbor',
           newProduct.description,
@@ -1168,6 +1197,7 @@ export const dbService = {
         const product: Product = {
           ...newProduct,
           id: rows[0].id,
+          slug: rows[0].slug,
           fisherman_id: rows[0].fisherman_id ? toAppId(rows[0].fisherman_id) : undefined,
           seller_name: rows[0].seller_name,
           is_available: rows[0].is_available,
@@ -1175,7 +1205,10 @@ export const dbService = {
         return { success: true, product };
       }
     } catch (err: any) {
-      warnFallback('Database createProduct fallback to memory:', err.message);
+      warnFallback('Database createProduct error:', err.message);
+      if (!isTestEnv && pool) {
+        return { success: false, message: 'Failed to create product in database: ' + (err.message || 'database error') };
+      }
     }
 
     const id = 'p_' + Date.now();
@@ -1299,7 +1332,7 @@ export const dbService = {
   async getCategories(): Promise<Category[]> {
     try {
       const rows = await queryDb(`SELECT * FROM categories WHERE is_active = TRUE ORDER BY display_order ASC`);
-      if (rows.length > 0) return rows;
+      return rows;
     } catch (err) {
       warnFallback('Database getCategories fallback:', err);
     }
@@ -1378,7 +1411,9 @@ export const dbService = {
           o.payment_collected_by, o.delivery_address, o.delivery_slot,
           o.delivery_notes, o.cancelled_reason, o.assigned_delivery_partner,
           o.created_at, o.updated_at,
-          p.full_name as customer_name, p.phone as customer_phone, p.email as customer_email,
+          COALESCE(p.full_name, o.delivery_address->>'recipient_name', 'Customer') as customer_name,
+          COALESCE(p.phone, o.delivery_address->>'phone', '') as customer_phone,
+          COALESCE(p.email, '') as customer_email,
           COALESCE(
             JSON_AGG(
               JSON_BUILD_OBJECT(
@@ -1397,7 +1432,7 @@ export const dbService = {
             '[]'::json
           ) as items
         FROM orders o
-        JOIN profiles p ON p.id = o.user_id
+        LEFT JOIN profiles p ON p.id = o.user_id
         LEFT JOIN order_items oi ON oi.order_id = o.id
         WHERE 1=1
       `;
@@ -1444,29 +1479,27 @@ export const dbService = {
       `;
 
       const rows = await queryDb(sql, values);
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          ...r,
-          id: toAppId(r.id),
-          user_id: toAppId(r.user_id),
-          fisherman_id: r.fisherman_id ? toAppId(r.fisherman_id) : undefined,
-          assigned_delivery_partner: r.assigned_delivery_partner
-            ? {
-                ...r.assigned_delivery_partner,
-                id: toAppId(r.assigned_delivery_partner.id),
-              }
-            : undefined,
-          items: Array.isArray(r.items)
-            ? r.items.map((it: any) => ({
-                ...it,
-                product_id: toAppId(it.product_id),
-                fisherman_id: it.fisherman_id ? toAppId(it.fisherman_id) : undefined,
-              }))
-            : [],
-          created_at: new Date(r.created_at).toISOString(),
-          updated_at: new Date(r.updated_at).toISOString(),
-        }));
-      }
+      return rows.map((r) => ({
+        ...r,
+        id: toAppId(r.id),
+        user_id: toAppId(r.user_id),
+        fisherman_id: r.fisherman_id ? toAppId(r.fisherman_id) : undefined,
+        assigned_delivery_partner: r.assigned_delivery_partner
+          ? {
+              ...r.assigned_delivery_partner,
+              id: toAppId(r.assigned_delivery_partner.id),
+            }
+          : undefined,
+        items: Array.isArray(r.items)
+          ? r.items.map((it: any) => ({
+              ...it,
+              product_id: toAppId(it.product_id),
+              fisherman_id: it.fisherman_id ? toAppId(it.fisherman_id) : undefined,
+            }))
+          : [],
+        created_at: new Date(r.created_at).toISOString(),
+        updated_at: new Date(r.updated_at).toISOString(),
+      }));
     } catch (err) {
       warnFallback('Database getOrders fallback to memory:', err);
     }
@@ -1581,80 +1614,91 @@ export const dbService = {
     const order_number = `FB-${dateStr}-${randSuffix}`;
     const now = new Date().toISOString();
 
-    try {
-      await queryDb(
-        `INSERT INTO orders (
-          id, order_number, user_id, fisherman_id, seller_name, status,
-          subtotal, cleaning_fee_total, delivery_fee, discount_amount, tax_amount, total_amount,
-          coupon_code, payment_method, payment_status, delivery_address, delivery_slot,
-          delivery_notes, created_at, updated_at
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6,
-          $7, $8, $9, $10, $11, $12,
-          $13, $14, $15, $16, $17,
-          $18, NOW(), NOW()
-        )`,
-        [
-          newId,
-          order_number,
-          dbUserId,
-          dbFishermanId,
-          orderData.seller_name || 'Visakha Harbor Cooperative',
-          orderData.status || 'confirmed',
-          orderData.subtotal,
-          orderData.cleaning_fee_total || 0,
-          orderData.delivery_fee || 0,
-          orderData.discount_amount || 0,
-          orderData.tax_amount || 0,
-          orderData.total_amount,
-          orderData.coupon_code || null,
-          'cod',
-          'pending',
-          JSON.stringify(orderData.delivery_address),
-          JSON.stringify(orderData.delivery_slot),
-          orderData.delivery_notes || null,
-        ]
-      );
+    if (pool && !isTestEnv) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
 
-      for (const item of orderData.items) {
-        const prodDbId = toDbId(item.product_id);
-        await queryDb(
-          `INSERT INTO order_items (
-            order_id, product_id, fisherman_id, seller_name, product_name,
-            product_image, preparation_name, cleaning_fee, unit_price, quantity, item_total
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        await client.query(
+          `INSERT INTO orders (
+            id, order_number, user_id, fisherman_id, seller_name, status,
+            subtotal, cleaning_fee_total, delivery_fee, discount_amount, tax_amount, total_amount,
+            coupon_code, payment_method, payment_status, delivery_address, delivery_slot,
+            delivery_notes, created_at, updated_at
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6,
+            $7, $8, $9, $10, $11, $12,
+            $13, $14, $15, $16, $17,
+            $18, NOW(), NOW()
+          )`,
           [
             newId,
-            prodDbId,
+            order_number,
+            dbUserId,
             dbFishermanId,
-            item.seller_name || orderData.seller_name,
-            item.product_name,
-            item.product_image || '',
-            item.preparation_name || 'Whole Cleaned',
-            item.cleaning_fee || 0,
-            item.unit_price,
-            item.quantity,
-            item.item_total,
+            orderData.seller_name || 'Visakha Harbor Cooperative',
+            orderData.status || 'confirmed',
+            orderData.subtotal,
+            orderData.cleaning_fee_total || 0,
+            orderData.delivery_fee || 0,
+            orderData.discount_amount || 0,
+            orderData.tax_amount || 0,
+            orderData.total_amount,
+            orderData.coupon_code || null,
+            'cod',
+            'pending',
+            JSON.stringify(orderData.delivery_address),
+            JSON.stringify(orderData.delivery_slot),
+            orderData.delivery_notes || null,
           ]
         );
 
-        await queryDb(
-          `UPDATE products 
-           SET stock_quantity = GREATEST(0, stock_quantity - $1),
-               is_available = CASE WHEN stock_quantity - $1 <= 0 THEN FALSE ELSE is_available END
-           WHERE id = $2 OR id::text = $3`,
-          [item.quantity, prodDbId, item.product_id]
-        );
-      }
+        for (const item of orderData.items) {
+          const prodDbId = toDbId(item.product_id);
+          await client.query(
+            `INSERT INTO order_items (
+              order_id, product_id, fisherman_id, seller_name, product_name,
+              product_image, preparation_name, cleaning_fee, unit_price, quantity, item_total
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            [
+              newId,
+              prodDbId,
+              dbFishermanId,
+              item.seller_name || orderData.seller_name,
+              item.product_name,
+              item.product_image || '',
+              item.preparation_name || 'Whole Cleaned',
+              item.cleaning_fee || 0,
+              item.unit_price,
+              item.quantity,
+              item.item_total,
+            ]
+          );
 
-      if (orderData.coupon_code) {
-        await queryDb(`UPDATE coupons SET used_count = used_count + 1 WHERE code = $1`, [orderData.coupon_code]);
-      }
+          await client.query(
+            `UPDATE products 
+             SET stock_quantity = GREATEST(0, stock_quantity - $1),
+                 is_available = CASE WHEN stock_quantity - $1 <= 0 THEN FALSE ELSE is_available END
+             WHERE id = $2 OR id::text = $3`,
+            [item.quantity, prodDbId, item.product_id]
+          );
+        }
 
-      const created = await this.getOrderById(newId);
-      if (created) return { success: true, order: created };
-    } catch (err: any) {
-      warnFallback('Database createOrder fallback to memory:', err.message);
+        if (orderData.coupon_code) {
+          await client.query(`UPDATE coupons SET used_count = used_count + 1 WHERE code = $1`, [orderData.coupon_code]);
+        }
+
+        await client.query('COMMIT');
+
+        const created = await this.getOrderById(newId);
+        if (created) return { success: true, order: created };
+      } catch (err: any) {
+        await client.query('ROLLBACK');
+        warnFallback('Database atomic createOrder error:', err.message);
+        return { success: false, message: 'Failed to place order in database: ' + (err.message || 'Database error') };
+      } finally {
+        client.release();
+      }
     }
 
     for (const item of orderData.items) {
@@ -2123,7 +2167,7 @@ export const dbService = {
         `SELECT * FROM addresses WHERE user_id = $1 OR user_id::text = $2 ORDER BY is_default DESC, created_at DESC`,
         [dbUserId, userId]
       );
-      if (rows.length > 0) return rows.map((a) => ({ ...a, user_id: toAppId(a.user_id) }));
+      return rows.map((a) => ({ ...a, user_id: toAppId(a.user_id) }));
     } catch (err) {
       warnFallback('Database getAddresses fallback:', err);
     }
@@ -2304,18 +2348,15 @@ export const dbService = {
         idx += 2;
       }
 
-      sql += ` ORDER BY created_at DESC`;
       const rows = await queryDb(sql, values);
-      if (rows.length > 0) {
-        return rows.map((r) => ({
-          ...r,
-          id: toAppId(r.id),
-          product_id: toAppId(r.product_id),
-          user_id: toAppId(r.user_id),
-          fisherman_id: r.fisherman_id ? toAppId(r.fisherman_id) : undefined,
-          order_id: r.order_id ? toAppId(r.order_id) : undefined,
-        }));
-      }
+      return rows.map((r) => ({
+        ...r,
+        id: toAppId(r.id),
+        product_id: toAppId(r.product_id),
+        user_id: toAppId(r.user_id),
+        fisherman_id: r.fisherman_id ? toAppId(r.fisherman_id) : undefined,
+        order_id: r.order_id ? toAppId(r.order_id) : undefined,
+      }));
     } catch (err) {
       warnFallback('Database getReviews fallback:', err);
     }
