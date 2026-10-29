@@ -1325,7 +1325,7 @@ export const dbService = {
           slug,
           newProduct.variety_species || null,
           newProduct.origin_source || 'Visakhapatnam Harbor',
-          newProduct.description,
+          newProduct.description || (`Fresh ${cleanName} caught and landed by ${sellerName}.`),
           newProduct.price_per_unit,
           newProduct.unit || 'kg',
           newProduct.discount_price || null,
