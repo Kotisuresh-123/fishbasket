@@ -46,15 +46,15 @@ export default function AdminDeliveryZonesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Delivery Zones & Fees</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">Delivery Zones & Fees</h1>
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
             Configure serviceable coastal Visakhapatnam PIN codes, transit charges, and free delivery thresholds
           </p>
         </div>
 
         <button
           onClick={() => setIsAddOpen(true)}
-          className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors shadow-xs"
+          className="px-4 py-2 btn-aqua font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Add New PIN Code</span>
@@ -62,15 +62,15 @@ export default function AdminDeliveryZonesPage() {
       </div>
 
       {isAddOpen && (
-        <form onSubmit={handleAddZone} className="bg-white p-6 rounded-2xl border border-teal-200 shadow-lg space-y-4">
-          <div className="flex justify-between items-center pb-2 border-b border-slate-100">
-            <h3 className="font-bold text-sm text-slate-900">Add Serviceable Delivery Area</h3>
-            <button type="button" onClick={() => setIsAddOpen(false)} className="text-slate-400 text-sm">✕</button>
+        <form onSubmit={handleAddZone} className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-lg space-y-4">
+          <div className="flex justify-between items-center pb-2 border-b border-[var(--border)]">
+            <h3 className="font-bold text-sm text-[var(--text-primary)]">Add Serviceable Delivery Area</h3>
+            <button type="button" onClick={() => setIsAddOpen(false)} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm cursor-pointer">✕</button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">PIN Code (6 digits)</label>
+              <label className="block font-semibold text-[var(--text-secondary)] mb-1">PIN Code (6 digits)</label>
               <input
                 type="text"
                 required
@@ -78,39 +78,39 @@ export default function AdminDeliveryZonesPage() {
                 value={pincode}
                 onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
                 placeholder="e.g. 530018"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 font-bold focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-primary)] font-bold focus:outline-none focus:border-[#00D2C4]"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Area / Locality Name</label>
+              <label className="block font-semibold text-[var(--text-secondary)] mb-1">Area / Locality Name</label>
               <input
                 type="text"
                 required
                 value={areaName}
                 onChange={(e) => setAreaName(e.target.value)}
                 placeholder="e.g. Waltair Uplands"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4]"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Delivery Charge (₹)</label>
+              <label className="block font-semibold text-[var(--text-secondary)] mb-1">Delivery Charge (₹)</label>
               <input
                 type="number"
                 value={deliveryCharge}
                 onChange={(e) => setDeliveryCharge(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4]"
               />
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Free Delivery Min Order (₹)</label>
+              <label className="block font-semibold text-[var(--text-secondary)] mb-1">Free Delivery Min Order (₹)</label>
               <input
                 type="number"
                 value={minOrder}
                 onChange={(e) => setMinOrder(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500"
+                className="w-full px-3 py-2 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4]"
               />
             </div>
           </div>
@@ -119,13 +119,13 @@ export default function AdminDeliveryZonesPage() {
             <button
               type="button"
               onClick={() => setIsAddOpen(false)}
-              className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-semibold"
+              className="px-4 py-2 border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] rounded-xl text-xs font-semibold cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold"
+              className="px-5 py-2 btn-aqua rounded-xl text-xs font-bold cursor-pointer"
             >
               Add Zone
             </button>
@@ -134,10 +134,10 @@ export default function AdminDeliveryZonesPage() {
       )}
 
       {/* Zones Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider text-[10px] border-b border-slate-100">
+            <thead className="bg-[var(--surface-elevated)] text-[var(--text-secondary)] font-bold uppercase tracking-wider text-[10px] border-b border-[var(--border)]">
               <tr>
                 <th className="p-4">PIN Code</th>
                 <th className="p-4">Area & Neighborhood</th>
@@ -147,19 +147,19 @@ export default function AdminDeliveryZonesPage() {
                 <th className="p-4 text-right">Serviceability</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-[var(--border)]">
               {zones.map((z) => (
-                <tr key={z.pincode} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="p-4 font-mono font-bold text-slate-900">{z.pincode}</td>
-                  <td className="p-4 font-semibold text-slate-800">{z.area_name}</td>
-                  <td className="p-4 text-slate-600">{z.city}</td>
-                  <td className="p-4 font-bold text-slate-800">{formatINR(z.delivery_charge)}</td>
-                  <td className="p-4 text-slate-700">{formatINR(z.min_order_for_free_delivery)}</td>
+                <tr key={z.pincode} className="hover:bg-[var(--surface-elevated)] transition-colors">
+                  <td className="p-4 font-mono font-bold text-[var(--text-primary)]">{z.pincode}</td>
+                  <td className="p-4 font-semibold text-[var(--text-primary)]">{z.area_name}</td>
+                  <td className="p-4 text-[var(--text-secondary)]">{z.city}</td>
+                  <td className="p-4 font-bold text-[var(--text-primary)]">{formatINR(z.delivery_charge)}</td>
+                  <td className="p-4 text-[var(--text-secondary)]">{formatINR(z.min_order_for_free_delivery)}</td>
                   <td className="p-4 text-right">
                     <button
                       onClick={() => handleToggleZone(z.pincode)}
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        z.is_serviceable ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider cursor-pointer ${
+                        z.is_serviceable ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-500 border border-rose-500/20'
                       }`}
                     >
                       {z.is_serviceable ? 'Serviceable' : 'Suspended'}

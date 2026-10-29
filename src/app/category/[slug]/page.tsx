@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { dbService } from '@/lib/db';
 import ProductCard from '@/components/ProductCard';
-import { ChevronRight } from 'lucide-react';
 
 interface CategoryPageProps {
   params: Promise<{
@@ -24,25 +23,25 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
       {/* Breadcrumbs */}
-      <div className="flex items-center gap-2 text-xs text-slate-400 mb-4">
-        <Link href="/" className="hover:text-teal-600">Home</Link>
+      <div className="flex items-center gap-2 text-xs text-[#7E92A2] dark:text-[#6B7F91] mb-4">
+        <Link href="/" className="hover:text-[#00D2C4] transition-colors">Home</Link>
         <span>/</span>
-        <Link href="/shop" className="hover:text-teal-600">Categories</Link>
+        <Link href="/shop" className="hover:text-[#00D2C4] transition-colors">Categories</Link>
         <span>/</span>
-        <span className="text-slate-700 font-semibold">{category.name}</span>
+        <span className="text-[#112233] dark:text-[#EAF2F8] font-semibold">{category.name}</span>
       </div>
 
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 rounded-3xl p-6 sm:p-10 text-white mb-10 shadow-lg">
+      <div className="bg-gradient-to-r from-[#0E3B43] via-[#0B2E35] to-[#0B131A] rounded-3xl p-6 sm:p-10 text-white mb-10 shadow-xl border border-[#00D2C4]/30">
         <div className="max-w-2xl">
-          <span className="text-teal-400 text-xs font-bold uppercase tracking-wider block mb-1">
+          <span className="text-[#00D2C4] text-xs font-bold uppercase tracking-wider block mb-1">
             Seafood Category
           </span>
           <h1 className="text-2xl sm:text-4xl font-black tracking-tight">{category.name}</h1>
           <p className="text-slate-300 text-xs sm:text-sm mt-2 leading-relaxed">
             {category.description}
           </p>
-          <div className="mt-4 text-xs font-semibold text-teal-200">
+          <div className="mt-4 text-xs font-bold text-[#00D2C4] inline-block px-3 py-1 bg-[#00D2C4]/15 rounded-full border border-[#00D2C4]/30">
             {products.length} {products.length === 1 ? 'catch available' : 'catches available'}
           </div>
         </div>
@@ -50,13 +49,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
       {/* Product List */}
       {products.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
-          <p className="text-slate-500 text-sm font-semibold">
+        <div className="text-center py-16 bg-white dark:bg-[#17232E] rounded-2xl border border-[#DCE5EA] dark:border-[#243444] transition-colors">
+          <p className="text-[#52667A] dark:text-[#9DB0C0] text-sm font-semibold">
             No catches currently listed in {category.name} today.
           </p>
           <Link
             href="/shop"
-            className="mt-3 inline-block px-4 py-2 bg-teal-600 text-white text-xs font-bold rounded-xl"
+            className="mt-3 inline-block px-4 py-2 btn-aqua text-xs font-bold rounded-xl shadow-xs"
           >
             Explore All Seafood
           </Link>

@@ -74,32 +74,32 @@ export default function RegisterFishermanPage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-12">
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
+      <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] p-8 shadow-sm space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-200/60 shadow-xs">
+          <div className="w-14 h-14 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-[#00D2C4] flex items-center justify-center mx-auto border border-teal-500/20 shadow-xs">
             <Anchor className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
             Fisherman Registration
           </h1>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto">
             Sell your daily ocean and river catches directly to seafood lovers across Visakhapatnam.
           </p>
         </div>
 
         {/* Pending Notice Box */}
-        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/80 flex items-start gap-3">
-          <Clock className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-          <div className="text-xs text-amber-900 space-y-1">
+        <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/20 flex items-start gap-3">
+          <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-800 dark:text-amber-300 space-y-1">
             <div className="font-bold">Approval Process Notice</div>
-            <div className="text-amber-800 text-[11px] leading-relaxed">
+            <div className="text-amber-700 dark:text-amber-400/90 text-[11px] leading-relaxed">
               New fisherman accounts start in <strong>Pending</strong> status. Once administrator verifies your landing dock, you can publish catches, update live stock, and receive orders.
             </div>
           </div>
         </div>
 
         {errorMsg && (
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-medium flex items-center gap-2">
+          <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -107,7 +107,7 @@ export default function RegisterFishermanPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
               Fisherman / Boat Display Name <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
@@ -117,18 +117,18 @@ export default function RegisterFishermanPage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="e.g. Captain Ramana (Bay Catch) or Godavari Delta Fishermen"
-                className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] font-medium transition-colors"
               />
-              <Anchor className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Anchor className="w-4 h-4 text-[var(--text-secondary)] absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
-            <span className="text-[10px] text-slate-400 mt-1 block">
+            <span className="text-[10px] text-[var(--text-secondary)] mt-1 block">
               This public name will appear on all your seafood listings.
             </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Contact Person Name
               </label>
               <div className="relative">
@@ -137,14 +137,14 @@ export default function RegisterFishermanPage() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Ramana Rao"
-                  className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                  className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] font-medium transition-colors"
                 />
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-[var(--text-secondary)] absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Phone Number
               </label>
               <div className="relative">
@@ -153,15 +153,15 @@ export default function RegisterFishermanPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+91 98765 43210"
-                  className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                  className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] font-medium transition-colors"
                 />
-                <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Phone className="w-4 h-4 text-[var(--text-secondary)] absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
               Email Address <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
@@ -171,14 +171,14 @@ export default function RegisterFishermanPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="captain.ramana@harbor.in"
-                className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] font-medium transition-colors"
               />
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-[var(--text-secondary)] absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
               Landing Center / Dock Harbor
             </label>
             <div className="relative">
@@ -187,15 +187,15 @@ export default function RegisterFishermanPage() {
                 value={dockLocation}
                 onChange={(e) => setDockLocation(e.target.value)}
                 placeholder="e.g. Visakhapatnam Fishing Harbor Jetty #3"
-                className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full pl-9 pr-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] font-medium transition-colors"
               />
-              <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <MapPin className="w-4 h-4 text-[var(--text-secondary)] absolute left-3 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Password <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
@@ -205,14 +205,14 @@ export default function RegisterFishermanPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 6 chars"
-                  className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                  className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] font-medium transition-colors"
                 />
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-[var(--text-secondary)] absolute left-3 top-1/2 -translate-y-1/2" />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Confirm Password <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
@@ -222,13 +222,13 @@ export default function RegisterFishermanPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repeat password"
-                  className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                  className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl bg-[var(--surface)] text-[var(--text-primary)] border border-[var(--border)] focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] font-medium transition-colors"
                 />
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-[var(--text-secondary)] absolute left-3 top-1/2 -translate-y-1/2" />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
                 >
                   {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 </button>
@@ -239,7 +239,7 @@ export default function RegisterFishermanPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 mt-2"
+            className="w-full py-3.5 btn-aqua font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 mt-2"
           >
             {isLoading ? (
               <span className="animate-pulse">Submitting Application...</span>
@@ -252,9 +252,9 @@ export default function RegisterFishermanPage() {
           </button>
         </form>
 
-        <div className="pt-2 border-t border-slate-100 text-center text-xs text-slate-500">
+        <div className="pt-2 border-t border-[var(--border)] text-center text-xs text-[var(--text-secondary)]">
           Already registered as a fisherman?{' '}
-          <Link href="/login" className="text-teal-700 font-bold hover:underline">
+          <Link href="/login" className="text-teal-600 dark:text-[#00D2C4] font-bold hover:underline">
             Sign In to Fisherman Portal
           </Link>
         </div>

@@ -94,19 +94,19 @@ export default function AdminFishermenPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
             Fisherman Management
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-[var(--text-secondary)] mt-0.5">
             Approve applicant fishermen, verify harbor dock landing centers, and manage selling privileges
           </p>
         </div>
 
         <button
           onClick={fetchFishermen}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 transition-colors self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] text-xs font-semibold rounded-xl hover:border-teal-500/40 transition-colors self-start sm:self-auto shadow-xs"
         >
-          <RefreshCw className="w-3.5 h-3.5 text-teal-600" />
+          <RefreshCw className="w-3.5 h-3.5 text-teal-600 dark:text-[#00D2C4]" />
           <span>Refresh Fishermen</span>
         </button>
       </div>
@@ -115,14 +115,14 @@ export default function AdminFishermenPage() {
         <div
           className={`p-3 rounded-xl text-xs flex items-center gap-2 ${
             feedback.type === 'success'
-              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-              : 'bg-rose-50 text-rose-800 border border-rose-200'
+              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20'
+              : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20'
           }`}
         >
           {feedback.type === 'success' ? (
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
           ) : (
-            <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+            <AlertTriangle className="w-4 h-4 text-rose-500 flex-shrink-0" />
           )}
           <span>{feedback.message}</span>
         </div>
@@ -131,46 +131,46 @@ export default function AdminFishermenPage() {
       {/* Metric Tabs */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
-          { key: 'all', label: 'All Registered', count: counts.all, color: 'text-slate-900' },
-          { key: 'pending', label: 'Pending Approval', count: counts.pending, color: 'text-amber-600' },
-          { key: 'approved', label: 'Active Approved', count: counts.approved, color: 'text-emerald-600' },
-          { key: 'suspended', label: 'Suspended', count: counts.suspended, color: 'text-rose-600' },
-          { key: 'rejected', label: 'Rejected', count: counts.rejected, color: 'text-slate-500' },
+          { key: 'all', label: 'All Registered', count: counts.all, color: 'text-[var(--text-primary)]' },
+          { key: 'pending', label: 'Pending Approval', count: counts.pending, color: 'text-amber-600 dark:text-amber-400' },
+          { key: 'approved', label: 'Active Approved', count: counts.approved, color: 'text-emerald-600 dark:text-emerald-400' },
+          { key: 'suspended', label: 'Suspended', count: counts.suspended, color: 'text-rose-600 dark:text-rose-400' },
+          { key: 'rejected', label: 'Rejected', count: counts.rejected, color: 'text-[var(--text-secondary)]' },
         ].map((tab) => (
           <button
             key={tab.key}
             onClick={() => setStatusFilter(tab.key)}
             className={`p-3 rounded-2xl border text-left transition-all ${
               statusFilter === tab.key
-                ? 'bg-white border-teal-500 shadow-xs ring-2 ring-teal-500/10'
-                : 'bg-white border-slate-200 hover:border-slate-300'
+                ? 'bg-[var(--surface-elevated)] border-[#00D2C4] shadow-xs ring-2 ring-[#00D2C4]/20'
+                : 'bg-[var(--surface)] border-[var(--border)] hover:border-[var(--text-secondary)]'
             }`}
           >
             <div className={`text-xl font-black ${tab.color}`}>{tab.count}</div>
-            <div className="text-[11px] font-semibold text-slate-500 mt-0.5">{tab.label}</div>
+            <div className="text-[11px] font-semibold text-[var(--text-secondary)] mt-0.5">{tab.label}</div>
           </button>
         ))}
       </div>
 
       {/* Filter and Search */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-[var(--surface)] p-4 rounded-2xl border border-[var(--border)] shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-[var(--text-secondary)] absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             placeholder="Search fisherman name, boat, dock, email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500"
+            className="w-full pl-9 pr-3 py-2 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4]"
           />
         </div>
 
         <div className="flex items-center gap-2 text-xs">
-          <span className="text-slate-400 font-medium">Filter Status:</span>
+          <span className="text-[var(--text-secondary)] font-medium">Filter Status:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-1.5 rounded-xl border border-slate-200 font-semibold bg-white text-slate-800 focus:outline-none focus:border-teal-500"
+            className="px-3 py-1.5 rounded-xl border border-[var(--border)] font-semibold bg-[var(--surface-elevated)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4]"
           >
             <option value="all">All Statuses ({counts.all})</option>
             <option value="pending">Pending ({counts.pending})</option>
@@ -183,12 +183,12 @@ export default function AdminFishermenPage() {
 
       {/* Fishermen List */}
       {loading ? (
-        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center">
-          <RefreshCw className="w-6 h-6 animate-spin text-teal-600 mx-auto mb-2" />
-          <span className="text-xs text-slate-500 font-semibold">Loading registered fishermen...</span>
+        <div className="bg-[var(--surface)] p-12 rounded-2xl border border-[var(--border)] text-center">
+          <RefreshCw className="w-6 h-6 animate-spin text-teal-600 dark:text-[#00D2C4] mx-auto mb-2" />
+          <span className="text-xs text-[var(--text-secondary)] font-semibold">Loading registered fishermen...</span>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center text-slate-500 text-xs">
+        <div className="bg-[var(--surface)] p-12 rounded-2xl border border-[var(--border)] text-center text-[var(--text-secondary)] text-xs">
           No fisherman accounts match your filter criteria.
         </div>
       ) : (
@@ -198,43 +198,43 @@ export default function AdminFishermenPage() {
             return (
               <div
                 key={f.id}
-                className={`bg-white p-5 rounded-2xl border shadow-xs space-y-4 transition-all ${
+                className={`bg-[var(--surface)] p-5 rounded-2xl border shadow-xs space-y-4 transition-all ${
                   f.status === 'pending'
-                    ? 'border-amber-200 bg-amber-50/20'
+                    ? 'border-amber-500/30 bg-amber-500/5'
                     : f.status === 'suspended'
-                    ? 'border-rose-200 bg-rose-50/20'
-                    : 'border-slate-200'
+                    ? 'border-rose-500/30 bg-rose-500/5'
+                    : 'border-[var(--border)]'
                 }`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border)]">
                   <div className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-[#00D2C4] flex items-center justify-center flex-shrink-0">
                       <Anchor className="w-5 h-5" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-sm">
+                        <span className="font-bold text-[var(--text-primary)] text-sm">
                           {f.display_name || f.full_name}
                         </span>
                         {f.display_name && (
-                          <span className="text-xs text-slate-400">({f.full_name})</span>
+                          <span className="text-xs text-[var(--text-secondary)]">({f.full_name})</span>
                         )}
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider border ${
                             f.status === 'approved'
-                              ? 'bg-emerald-100 text-emerald-800'
+                              ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
                               : f.status === 'pending'
-                              ? 'bg-amber-100 text-amber-800'
+                              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
                               : f.status === 'suspended'
-                              ? 'bg-rose-100 text-rose-800'
-                              : 'bg-slate-100 text-slate-700'
+                              ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
+                              : 'bg-slate-500/10 text-[var(--text-secondary)] border-slate-500/20'
                           }`}
                         >
                           {f.status || 'approved'}
                         </span>
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-2">
-                        <span>Fisherman ID: <code className="font-mono text-slate-600">{f.id}</code></span>
+                      <div className="text-[11px] text-[var(--text-secondary)] mt-0.5 flex items-center gap-2">
+                        <span>Fisherman ID: <code className="font-mono text-[var(--text-primary)]">{f.id}</code></span>
                         <span>•</span>
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 h-3" /> Registered: {new Date(f.created_at).toLocaleDateString()}
@@ -250,7 +250,7 @@ export default function AdminFishermenPage() {
                         <button
                           onClick={() => handleUpdateStatus(f.id, 'approved')}
                           disabled={isUpdating}
-                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
+                          className="btn-aqua px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           <span>Approve Fisherman</span>
@@ -258,7 +258,7 @@ export default function AdminFishermenPage() {
                         <button
                           onClick={() => handleUpdateStatus(f.id, 'rejected')}
                           disabled={isUpdating}
-                          className="px-3.5 py-1.5 bg-rose-50 border border-rose-200 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
+                          className="px-3.5 py-1.5 bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 hover:bg-rose-500/20 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                           <span>Reject</span>
@@ -270,9 +270,9 @@ export default function AdminFishermenPage() {
                       <button
                         onClick={() => handleUpdateStatus(f.id, 'suspended')}
                         disabled={isUpdating}
-                        className="px-3.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 hover:bg-amber-100 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
+                        className="px-3.5 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1.5"
                       >
-                        <Lock className="w-3.5 h-3.5 text-amber-600" />
+                        <Lock className="w-3.5 h-3.5 text-amber-500" />
                         <span>Suspend Account</span>
                       </button>
                     )}
@@ -281,7 +281,7 @@ export default function AdminFishermenPage() {
                       <button
                         onClick={() => handleUpdateStatus(f.id, 'approved')}
                         disabled={isUpdating}
-                        className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
+                        className="btn-aqua px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
                       >
                         <Unlock className="w-3.5 h-3.5" />
                         <span>Reactivate Account</span>
@@ -292,7 +292,7 @@ export default function AdminFishermenPage() {
                       <button
                         onClick={() => handleUpdateStatus(f.id, 'approved')}
                         disabled={isUpdating}
-                        className="px-3.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
+                        className="btn-aqua px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 shadow-xs"
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         <span>Reconsider & Approve</span>
@@ -302,20 +302,20 @@ export default function AdminFishermenPage() {
                 </div>
 
                 {/* Details Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-slate-600">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-[var(--text-secondary)]">
                   <div className="flex items-center gap-2">
-                    <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <Mail className="w-3.5 h-3.5 text-[var(--text-secondary)] flex-shrink-0" />
                     <span className="truncate">{f.email}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Phone className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <Phone className="w-3.5 h-3.5 text-[var(--text-secondary)] flex-shrink-0" />
                     <span>{f.phone || 'No phone provided'}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-3.5 h-3.5 text-teal-600 flex-shrink-0" />
-                    <span className="truncate font-medium text-slate-800">
+                    <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-[#00D2C4] flex-shrink-0" />
+                    <span className="truncate font-medium text-[var(--text-primary)]">
                       {f.dock_location || 'Harbor Dock not specified'}
                     </span>
                   </div>

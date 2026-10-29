@@ -3,7 +3,7 @@ import { dbService } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
-    const { email, full_name, phone, password } = await request.json();
+    const { email, full_name, phone, password, auth_id } = await request.json();
 
     if (!email || !full_name || !password) {
       return NextResponse.json(
@@ -24,6 +24,7 @@ export async function POST(request: Request) {
       full_name,
       phone: phone || '',
       password,
+      auth_id,
     });
 
     if (!regResult.success || !regResult.user) {

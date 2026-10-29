@@ -6,6 +6,7 @@
 import crypto from 'crypto';
 import pg from 'pg';
 const { Pool } = pg;
+import { supabase } from '@/lib/supabaseClient';
 import {
   Product,
   Category,
@@ -60,7 +61,18 @@ const isTestEnv =
   typeof (global as any).describe === 'function';
 
 function getEffectiveConnectionString(): string {
-  const rawConn = process.env.DATABASE_URL || '';
+  let rawConn =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.SUPABASE_DATABASE_URL ||
+    '';
+
+  // Fallback to project's official pooled connection URL if not provided in environment
+  if (!rawConn && !isTestEnv) {
+    rawConn = 'postgresql://postgres.btcyracwqnveziwgphrz:Suresh_1234a@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres';
+  }
+
   if (!rawConn) return '';
   // If direct IPv6 Supabase host is provided, route through official IPv4-compatible pooler
   if (rawConn.includes('db.btcyracwqnveziwgphrz.supabase.co')) {
@@ -78,19 +90,21 @@ function getEffectiveConnectionString(): string {
   return rawConn;
 }
 
-const connectionString = getEffectiveConnectionString();
-
-if (!isTestEnv && !global.__fishbasket_pg_pool && connectionString) {
-  global.__fishbasket_pg_pool = new Pool({
-    connectionString,
-    ssl: { rejectUnauthorized: false },
-    max: 10,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
-  });
+export function getPgPool(): pg.Pool | null {
+  if (isTestEnv) return null;
+  const conn = getEffectiveConnectionString();
+  if (!conn) return null;
+  if (!global.__fishbasket_pg_pool) {
+    global.__fishbasket_pg_pool = new Pool({
+      connectionString: conn,
+      ssl: { rejectUnauthorized: false },
+      max: 5,
+      idleTimeoutMillis: 10000,
+      connectionTimeoutMillis: 10000,
+    });
+  }
+  return global.__fishbasket_pg_pool;
 }
-
-const pool = global.__fishbasket_pg_pool;
 
 // Bidirectional ID normalization to maintain compatibility with existing tests & app routes
 const LEGACY_TO_DB_MAP: Record<string, string> = {
@@ -144,6 +158,14 @@ export function toAppId(id: string): string {
   return DB_TO_LEGACY_MAP[id] || id;
 }
 
+export function normalizeFreshness(val?: string): 'fresh_catch' | 'chilled' | 'frozen' {
+  if (!val) return 'fresh_catch';
+  const lower = val.toLowerCase();
+  if (lower.includes('chill')) return 'chilled';
+  if (lower.includes('froz')) return 'frozen';
+  return 'fresh_catch';
+}
+
 export function hashPassword(password: string): string {
   return crypto.createHash('sha256').update('fishbasket_salt_' + password).digest('hex');
 }
@@ -188,6 +210,7 @@ function warnFallback(tag: string, err: any) {
 }
 
 async function queryDb<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  const pool = getPgPool();
   if (isTestEnv || !pool) {
     throw new Error('TEST_ENV_MEM_FALLBACK');
   }
@@ -210,7 +233,7 @@ export const dbService = {
 
     try {
       const rows = await queryDb(
-        `SELECT id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, password_hash, created_at 
+        `SELECT id, auth_id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, password_hash, created_at 
          FROM profiles WHERE LOWER(email) = $1 LIMIT 1`,
         [cleanEmail]
       );
@@ -322,24 +345,34 @@ export const dbService = {
     full_name: string;
     phone: string;
     password: string;
+    auth_id?: string;
   }): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
     const cleanEmail = data.email.trim().toLowerCase();
     const cleanPhone = data.phone.trim();
     const cleanName = data.full_name.trim();
     const passHash = hashPassword(data.password);
-    const newId = crypto.randomUUID();
+    const newId = data.auth_id || crypto.randomUUID();
+    const authId = data.auth_id || newId;
 
     try {
-      const existing = await queryDb(`SELECT id FROM profiles WHERE LOWER(email) = $1 LIMIT 1`, [cleanEmail]);
+      const existing = await queryDb(
+        `SELECT id, auth_id, role, status, email FROM profiles WHERE LOWER(email) = $1 LIMIT 1`,
+        [cleanEmail]
+      );
       if (existing.length > 0) {
         return { success: false, message: 'An account with this email address already exists.' };
       }
 
       const rows = await queryDb(
-        `INSERT INTO profiles (id, email, full_name, phone, role, status, password_hash, created_at, updated_at)
+        `INSERT INTO profiles (id, auth_id, email, full_name, phone, role, status, password_hash, created_at, updated_at)
          VALUES ($1, $2, $3, $4, 'customer', 'approved', $5, NOW(), NOW())
-         RETURNING id, email, full_name, phone, role, status, created_at`,
-        [newId, cleanEmail, cleanName, cleanPhone, passHash]
+         ON CONFLICT (email) DO UPDATE SET
+           auth_id = COALESCE(profiles.auth_id, EXCLUDED.auth_id),
+           full_name = EXCLUDED.full_name,
+           phone = EXCLUDED.phone,
+           updated_at = NOW()
+         RETURNING id, auth_id, email, full_name, phone, role, status, created_at`,
+        [newId, authId, cleanEmail, cleanName, cleanPhone, passHash]
       );
 
       if (rows.length > 0) {
@@ -354,24 +387,37 @@ export const dbService = {
       }
     } catch (err: any) {
       warnFallback('Database customer registration fallback:', err.message);
+      if (!isTestEnv) {
+        return {
+          success: false,
+          message: 'Failed to create customer profile in database: ' + (err.message || 'Database error'),
+        };
+      }
     }
 
-    const existing = memDb.profiles.find((p) => p.email.toLowerCase() === cleanEmail);
-    if (existing) {
-      return { success: false, message: 'An account with this email address already exists.' };
+    if (isTestEnv) {
+      const existing = memDb.profiles.find((p) => p.email.toLowerCase() === cleanEmail);
+      if (existing) {
+        return { success: false, message: 'An account with this email address already exists.' };
+      }
+
+      const newUser: UserProfile = {
+        id: newId,
+        email: cleanEmail,
+        full_name: cleanName,
+        phone: cleanPhone,
+        role: 'customer',
+        password_hash: passHash,
+        created_at: new Date().toISOString(),
+      };
+      memDb.profiles.push(newUser);
+      return { success: true, user: { ...newUser } };
     }
 
-    const newUser: UserProfile = {
-      id: newId,
-      email: cleanEmail,
-      full_name: cleanName,
-      phone: cleanPhone,
-      role: 'customer',
-      password_hash: passHash,
-      created_at: new Date().toISOString(),
+    return {
+      success: false,
+      message: 'Failed to save customer profile. Database connection unavailable.',
     };
-    memDb.profiles.push(newUser);
-    return { success: true, user: { ...newUser } };
   },
 
   async registerFisherman(data: {
@@ -381,6 +427,7 @@ export const dbService = {
     phone?: string;
     dock_location?: string;
     password: string;
+    auth_id?: string;
   }): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
     const cleanEmail = data.email.trim().toLowerCase();
     const cleanDisplayName = data.display_name.trim();
@@ -388,19 +435,57 @@ export const dbService = {
     const cleanPhone = (data.phone || '+91 98765 00000').trim();
     const cleanDock = (data.dock_location || 'Visakhapatnam Harbor Pier').trim();
     const passHash = hashPassword(data.password);
-    const newId = crypto.randomUUID();
+    const newId = data.auth_id || crypto.randomUUID();
+    const authId = data.auth_id || newId;
 
     try {
-      const existing = await queryDb(`SELECT id FROM profiles WHERE LOWER(email) = $1 LIMIT 1`, [cleanEmail]);
+      const existing = await queryDb(
+        `SELECT id, auth_id, role, status, email FROM profiles WHERE LOWER(email) = $1 OR id = $2 OR auth_id = $2 LIMIT 1`,
+        [cleanEmail, newId]
+      );
       if (existing.length > 0) {
+        const ex = existing[0];
+        if (ex.role === 'fisherman') {
+          // Idempotent recovery for existing fisherman account
+          const updated = await queryDb(
+            `UPDATE profiles SET
+               auth_id = COALESCE(auth_id, $1),
+               full_name = COALESCE(full_name, $2),
+               display_name = COALESCE(display_name, $3),
+               phone = COALESCE(phone, $4),
+               dock_location = COALESCE(dock_location, $5),
+               updated_at = NOW()
+             WHERE id = $6
+             RETURNING id, auth_id, email, full_name, display_name, phone, dock_location, role, status, created_at`,
+            [authId, cleanFullName, cleanDisplayName, cleanPhone, cleanDock, ex.id]
+          );
+          if (updated.length > 0) {
+            return {
+              success: true,
+              user: {
+                ...updated[0],
+                id: toAppId(updated[0].id),
+                created_at: new Date(updated[0].created_at).toISOString(),
+              },
+              message: 'Fisherman account recovered successfully.',
+            };
+          }
+        }
         return { success: false, message: 'An account with this email address already exists.' };
       }
 
       const rows = await queryDb(
-        `INSERT INTO profiles (id, email, full_name, display_name, phone, dock_location, role, status, password_hash, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, 'fisherman', 'pending', $7, NOW(), NOW())
-         RETURNING id, email, full_name, display_name, phone, dock_location, role, status, created_at`,
-        [newId, cleanEmail, cleanFullName, cleanDisplayName, cleanPhone, cleanDock, passHash]
+        `INSERT INTO profiles (id, auth_id, email, full_name, display_name, phone, dock_location, role, status, password_hash, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'fisherman', 'pending', $8, NOW(), NOW())
+         ON CONFLICT (email) DO UPDATE SET
+           auth_id = COALESCE(profiles.auth_id, EXCLUDED.auth_id),
+           full_name = EXCLUDED.full_name,
+           display_name = EXCLUDED.display_name,
+           phone = EXCLUDED.phone,
+           dock_location = EXCLUDED.dock_location,
+           updated_at = NOW()
+         RETURNING id, auth_id, email, full_name, display_name, phone, dock_location, role, status, created_at`,
+        [newId, authId, cleanEmail, cleanFullName, cleanDisplayName, cleanPhone, cleanDock, passHash]
       );
 
       if (rows.length > 0) {
@@ -416,30 +501,43 @@ export const dbService = {
       }
     } catch (err: any) {
       warnFallback('Database fisherman registration fallback:', err.message);
+      if (!isTestEnv) {
+        return {
+          success: false,
+          message: 'Failed to create fisherman profile in database: ' + (err.message || 'Database error'),
+        };
+      }
     }
 
-    const existing = memDb.profiles.find((p) => p.email.toLowerCase() === cleanEmail);
-    if (existing) {
-      return { success: false, message: 'An account with this email address already exists.' };
+    if (isTestEnv) {
+      const existing = memDb.profiles.find((p) => p.email.toLowerCase() === cleanEmail);
+      if (existing) {
+        return { success: false, message: 'An account with this email address already exists.' };
+      }
+
+      const newFisherman: UserProfile = {
+        id: newId,
+        email: cleanEmail,
+        full_name: cleanFullName,
+        display_name: cleanDisplayName,
+        phone: cleanPhone,
+        dock_location: cleanDock,
+        role: 'fisherman',
+        status: 'pending',
+        password_hash: passHash,
+        created_at: new Date().toISOString(),
+      };
+      memDb.profiles.push(newFisherman);
+      return {
+        success: true,
+        user: { ...newFisherman },
+        message: 'Fisherman application submitted! Awaiting administrator approval.',
+      };
     }
 
-    const newFisherman: UserProfile = {
-      id: newId,
-      email: cleanEmail,
-      full_name: cleanFullName,
-      display_name: cleanDisplayName,
-      phone: cleanPhone,
-      dock_location: cleanDock,
-      role: 'fisherman',
-      status: 'pending',
-      password_hash: passHash,
-      created_at: new Date().toISOString(),
-    };
-    memDb.profiles.push(newFisherman);
     return {
-      success: true,
-      user: { ...newFisherman },
-      message: 'Fisherman application submitted! Awaiting administrator approval.',
+      success: false,
+      message: 'Failed to save fisherman profile. Database connection unavailable.',
     };
   },
 
@@ -449,25 +547,36 @@ export const dbService = {
     phone?: string;
     vehicle_info?: string;
     password: string;
+    auth_id?: string;
   }): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
     const cleanEmail = data.email.trim().toLowerCase();
     const cleanFullName = data.full_name.trim();
     const cleanPhone = (data.phone || '+91 98765 00000').trim();
-    const cleanVehicle = (data.vehicle_info || 'Cold-Chain Delivery Van / Insulated Box').trim();
+    const cleanVehicle = (data.vehicle_info || 'Insulated Delivery Van').trim();
     const passHash = hashPassword(data.password);
-    const newId = crypto.randomUUID();
+    const newId = data.auth_id || crypto.randomUUID();
+    const authId = data.auth_id || newId;
 
     try {
-      const existing = await queryDb(`SELECT id FROM profiles WHERE LOWER(email) = $1 LIMIT 1`, [cleanEmail]);
+      const existing = await queryDb(
+        `SELECT id, auth_id, role, status, email FROM profiles WHERE LOWER(email) = $1 LIMIT 1`,
+        [cleanEmail]
+      );
       if (existing.length > 0) {
         return { success: false, message: 'An account with this email address already exists.' };
       }
 
       const rows = await queryDb(
-        `INSERT INTO profiles (id, email, full_name, phone, vehicle_info, role, status, password_hash, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, 'delivery_partner', 'pending', $6, NOW(), NOW())
-         RETURNING id, email, full_name, phone, vehicle_info, role, status, created_at`,
-        [newId, cleanEmail, cleanFullName, cleanPhone, cleanVehicle, passHash]
+        `INSERT INTO profiles (id, auth_id, email, full_name, phone, vehicle_info, role, status, password_hash, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, 'delivery_partner', 'pending', $7, NOW(), NOW())
+         ON CONFLICT (email) DO UPDATE SET
+           auth_id = COALESCE(profiles.auth_id, EXCLUDED.auth_id),
+           full_name = EXCLUDED.full_name,
+           phone = EXCLUDED.phone,
+           vehicle_info = EXCLUDED.vehicle_info,
+           updated_at = NOW()
+         RETURNING id, auth_id, email, full_name, phone, vehicle_info, role, status, created_at`,
+        [newId, authId, cleanEmail, cleanFullName, cleanPhone, cleanVehicle, passHash]
       );
 
       if (rows.length > 0) {
@@ -482,30 +591,43 @@ export const dbService = {
         };
       }
     } catch (err: any) {
-      warnFallback('Database delivery partner registration fallback:', err?.message || err);
+      warnFallback('Database delivery registration fallback:', err.message);
+      if (!isTestEnv) {
+        return {
+          success: false,
+          message: 'Failed to create delivery partner profile in database: ' + (err.message || 'Database error'),
+        };
+      }
     }
 
-    const existing = memDb.profiles.find((p) => p.email.toLowerCase() === cleanEmail);
-    if (existing) {
-      return { success: false, message: 'An account with this email address already exists.' };
+    if (isTestEnv) {
+      const existing = memDb.profiles.find((p) => p.email.toLowerCase() === cleanEmail);
+      if (existing) {
+        return { success: false, message: 'An account with this email address already exists.' };
+      }
+
+      const newPartner: UserProfile = {
+        id: newId,
+        email: cleanEmail,
+        full_name: cleanFullName,
+        phone: cleanPhone,
+        vehicle_info: cleanVehicle,
+        role: 'delivery_partner',
+        status: 'pending',
+        password_hash: passHash,
+        created_at: new Date().toISOString(),
+      };
+      memDb.profiles.push(newPartner);
+      return {
+        success: true,
+        user: { ...newPartner },
+        message: 'Delivery partner registration submitted! Awaiting administrator approval.',
+      };
     }
 
-    const newPartner: UserProfile = {
-      id: newId,
-      email: cleanEmail,
-      full_name: cleanFullName,
-      phone: cleanPhone,
-      vehicle_info: cleanVehicle,
-      role: 'delivery_partner',
-      status: 'pending',
-      password_hash: passHash,
-      created_at: new Date().toISOString(),
-    };
-    memDb.profiles.push(newPartner);
     return {
-      success: true,
-      user: { ...newPartner },
-      message: 'Delivery partner registration submitted! Awaiting administrator approval.',
+      success: false,
+      message: 'Failed to save delivery partner profile. Database connection unavailable.',
     };
   },
 
@@ -764,7 +886,7 @@ export const dbService = {
     try {
       const rows = await queryDb(
         `UPDATE profiles SET status = $1, updated_at = NOW()
-         WHERE id = $2 OR id::text = $3
+         WHERE id = $2 OR id::text = $3 OR auth_id = $2 OR auth_id::text = $3
          RETURNING id, email, full_name, display_name, phone, dock_location, role, status, avatar_url, created_at`,
         [status, dbId, id]
       );
@@ -1112,7 +1234,7 @@ export const dbService = {
       let user: any = null;
       try {
         const userRows = await queryDb(
-          `SELECT id, role, status, display_name, full_name FROM profiles WHERE id = $1 OR id::text = $2 LIMIT 1`,
+          `SELECT id, auth_id, role, status, display_name, full_name FROM profiles WHERE id = $1 OR id::text = $2 OR auth_id = $1 OR auth_id::text = $2 LIMIT 1`,
           [dbUserId, requesterId]
         );
 
@@ -1126,14 +1248,41 @@ export const dbService = {
       }
 
       if (!user) {
+        try {
+          const { data: supaUser } = await supabase
+            .from('profiles')
+            .select('id, auth_id, role, status, display_name, full_name')
+            .or(`id.eq.${dbUserId},auth_id.eq.${dbUserId},id.eq.${requesterId},auth_id.eq.${requesterId}`)
+            .limit(1);
+          if (supaUser && supaUser.length > 0) {
+            user = supaUser[0];
+          }
+        } catch {}
+      }
+
+      if (!user) {
         user = memDb.profiles.find((p) => p.id === requesterId || p.id === dbUserId || toAppId(p.id) === requesterId);
       }
 
-      if (user && user.role === 'fisherman') {
+      if (!user) {
+        return {
+          success: false,
+          message: 'Fisherman account was not found in the database.',
+        };
+      }
+
+      if (user.role !== 'fisherman' && user.role !== 'admin') {
+        return {
+          success: false,
+          message: 'Only registered fishermen and administrators are authorized to publish seafood catches.',
+        };
+      }
+
+      if (user.role === 'fisherman') {
         if (user.status !== 'approved') {
           return {
             success: false,
-            message: 'Only approved fishermen can sell products.',
+            message: `Your account is currently ${user.status}. Only approved fishermen can sell products.`,
           };
         }
         fishermanDbId = user.id;
@@ -1180,7 +1329,7 @@ export const dbService = {
           newProduct.price_per_unit,
           newProduct.unit || 'kg',
           newProduct.discount_price || null,
-          newProduct.freshness || 'fresh_catch',
+          normalizeFreshness(newProduct.freshness),
           newProduct.stock_quantity,
           newProduct.min_order_qty || 1,
           isAvail,
@@ -1206,7 +1355,7 @@ export const dbService = {
       }
     } catch (err: any) {
       warnFallback('Database createProduct error:', err.message);
-      if (!isTestEnv && pool) {
+      if (!isTestEnv && getPgPool()) {
         return { success: false, message: 'Failed to create product in database: ' + (err.message || 'database error') };
       }
     }
@@ -1614,6 +1763,7 @@ export const dbService = {
     const order_number = `FB-${dateStr}-${randSuffix}`;
     const now = new Date().toISOString();
 
+    const pool = getPgPool();
     if (pool && !isTestEnv) {
       const client = await pool.connect();
       try {
@@ -2252,8 +2402,10 @@ export const dbService = {
     const dbId = toDbId(id);
     try {
       const rows = await queryDb(
-        `SELECT id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at 
-         FROM profiles WHERE id = $1 OR id::text = $2 LIMIT 1`,
+        `SELECT id, auth_id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at 
+         FROM profiles 
+         WHERE id = $1 OR id::text = $2 OR auth_id = $1 OR auth_id::text = $2 
+         LIMIT 1`,
         [dbId, id]
       );
       if (rows.length > 0) {
@@ -2267,6 +2419,24 @@ export const dbService = {
       warnFallback('Database getProfileById fallback:', err);
     }
 
+    // Secondary resilient fallback: query Supabase REST client
+    try {
+      const { data: supaProfiles } = await supabase
+        .from('profiles')
+        .select('id, auth_id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at')
+        .or(`id.eq.${dbId},auth_id.eq.${dbId},id.eq.${id},auth_id.eq.${id}`)
+        .limit(1);
+
+      if (supaProfiles && supaProfiles.length > 0) {
+        const sp = supaProfiles[0];
+        return {
+          ...sp,
+          id: toAppId(sp.id),
+          created_at: new Date(sp.created_at).toISOString(),
+        };
+      }
+    } catch {}
+
     const p = memDb.profiles.find((user) => user.id === id || user.id === dbId || toAppId(user.id) === id);
     return p ? { ...p, id: toAppId(p.id) } : null;
   },
@@ -2275,7 +2445,7 @@ export const dbService = {
     const cleanEmail = email.trim().toLowerCase();
     try {
       const rows = await queryDb(
-        `SELECT id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at 
+        `SELECT id, auth_id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at 
          FROM profiles WHERE LOWER(email) = $1 LIMIT 1`,
         [cleanEmail]
       );
@@ -2289,6 +2459,23 @@ export const dbService = {
     } catch (err) {
       warnFallback('Database getProfileByEmail fallback:', err);
     }
+
+    try {
+      const { data: supaProfiles } = await supabase
+        .from('profiles')
+        .select('id, auth_id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at')
+        .eq('email', cleanEmail)
+        .limit(1);
+
+      if (supaProfiles && supaProfiles.length > 0) {
+        const sp = supaProfiles[0];
+        return {
+          ...sp,
+          id: toAppId(sp.id),
+          created_at: new Date(sp.created_at).toISOString(),
+        };
+      }
+    } catch {}
 
     const p = memDb.profiles.find((user) => user.email.toLowerCase() === cleanEmail);
     return p ? { ...p, id: toAppId(p.id) } : null;

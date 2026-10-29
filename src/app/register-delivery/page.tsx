@@ -73,32 +73,32 @@ export default function RegisterDeliveryPartnerPage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-12">
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm space-y-6">
+      <div className="bg-[var(--surface)] rounded-3xl border border-[var(--border)] p-8 shadow-sm space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto border border-amber-200/60 shadow-xs">
+          <div className="w-14 h-14 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-[#00D2C4] flex items-center justify-center mx-auto border border-teal-500/20 shadow-xs">
             <Truck className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
             Delivery Partner Registration
           </h1>
-          <p className="text-xs text-slate-500 max-w-sm mx-auto">
+          <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto">
             Join the Fish Basket cold-chain fleet delivering fresh catches across Visakhapatnam.
           </p>
         </div>
 
         {/* Pending Notice Box */}
-        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-200/80 flex items-start gap-3">
-          <Clock className="w-4 h-4 text-amber-700 flex-shrink-0 mt-0.5" />
-          <div className="text-xs text-amber-900 space-y-1">
+        <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/20 flex items-start gap-3">
+          <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-amber-800 dark:text-amber-300 space-y-1">
             <div className="font-bold">Fleet Approval Process Notice</div>
-            <div className="text-amber-800 text-[11px] leading-relaxed">
+            <div className="text-amber-700 dark:text-amber-400/90 text-[11px] leading-relaxed">
               New delivery partner registrations start in <strong>Pending</strong> status. Once operations administrators verify your vehicle and contact details, your account will be activated to accept live dispatches.
             </div>
           </div>
         </div>
 
         {errorMsg && (
-          <div className="p-3.5 bg-red-50 border border-red-200 rounded-2xl text-xs text-red-700 flex items-center gap-2">
+          <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-xs text-rose-600 dark:text-rose-400 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             <span>{errorMsg}</span>
           </div>
@@ -107,94 +107,94 @@ export default function RegisterDeliveryPartnerPage() {
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           {/* Full Name */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700 block">
-              Driver Full Name <span className="text-red-500">*</span>
+            <label className="font-bold text-[var(--text-primary)] block">
+              Driver Full Name <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <User className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 required
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="e.g. Ramesh Varma"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-amber-500 bg-slate-50/50"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] transition-colors"
               />
             </div>
           </div>
 
           {/* Email */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700 block">
-              Email Address <span className="text-red-500">*</span>
+            <label className="font-bold text-[var(--text-primary)] block">
+              Email Address <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="driver@fishbasket.in"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-amber-500 bg-slate-50/50"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] transition-colors"
               />
             </div>
           </div>
 
           {/* Phone */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700 block">
-              Mobile Number <span className="text-red-500">*</span>
+            <label className="font-bold text-[var(--text-primary)] block">
+              Mobile Number <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Phone className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="tel"
                 required
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 98765 43210"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-amber-500 bg-slate-50/50"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] transition-colors"
               />
             </div>
           </div>
 
           {/* Vehicle Info */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700 block">
-              Vehicle & Cold-Chain Equipment Details <span className="text-slate-400 font-normal">(Optional)</span>
+            <label className="font-bold text-[var(--text-primary)] block">
+              Vehicle & Cold-Chain Equipment Details <span className="text-[var(--text-secondary)] font-normal">(Optional)</span>
             </label>
             <div className="relative">
-              <Navigation className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Navigation className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={vehicleInfo}
                 onChange={(e) => setVehicleInfo(e.target.value)}
                 placeholder="e.g. Electric Scooter with Insulated Cold Box (AP 31 XX 1234)"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-amber-500 bg-slate-50/50"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] transition-colors"
               />
             </div>
           </div>
 
           {/* Password */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700 block">
-              Create Password <span className="text-red-500">*</span>
+            <label className="font-bold text-[var(--text-primary)] block">
+              Create Password <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-amber-500 bg-slate-50/50"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -203,18 +203,18 @@ export default function RegisterDeliveryPartnerPage() {
 
           {/* Confirm Password */}
           <div className="space-y-1.5">
-            <label className="font-bold text-slate-700 block">
-              Confirm Password <span className="text-red-500">*</span>
+            <label className="font-bold text-[var(--text-primary)] block">
+              Confirm Password <span className="text-rose-500">*</span>
             </label>
             <div className="relative">
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-[var(--text-secondary)] absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Re-enter password"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-amber-500 bg-slate-50/50"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] text-[var(--text-primary)] text-xs focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4] transition-colors"
               />
             </div>
           </div>
@@ -223,7 +223,7 @@ export default function RegisterDeliveryPartnerPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3.5 btn-aqua disabled:opacity-50 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
             >
               <span>{isLoading ? 'Submitting Application...' : 'Submit Delivery Fleet Application'}</span>
               <ArrowRight className="w-4 h-4" />
@@ -231,16 +231,16 @@ export default function RegisterDeliveryPartnerPage() {
           </div>
         </form>
 
-        <div className="pt-4 border-t border-slate-100 text-center space-y-2 text-xs">
-          <p className="text-slate-500">
+        <div className="pt-4 border-t border-[var(--border)] text-center space-y-2 text-xs">
+          <p className="text-[var(--text-secondary)]">
             Already registered as a fleet driver?{' '}
-            <Link href="/login" className="text-amber-700 font-bold hover:underline">
+            <Link href="/login" className="text-teal-600 dark:text-[#00D2C4] font-bold hover:underline">
               Sign In
             </Link>
           </p>
-          <p className="text-slate-400 text-[11px]">
+          <p className="text-[var(--text-secondary)] text-[11px]">
             Looking to sell fresh catches?{' '}
-            <Link href="/register-fisherman" className="text-teal-700 font-bold hover:underline">
+            <Link href="/register-fisherman" className="text-teal-600 dark:text-[#00D2C4] font-bold hover:underline">
               Register as Fisherman
             </Link>
           </p>

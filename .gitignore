@@ -3,6 +3,7 @@
 out/
 build/
 .swc/
+*.tsbuildinfo
 
 # Node dependencies
 node_modules/

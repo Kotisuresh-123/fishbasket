@@ -36,10 +36,10 @@ export default function FAQPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-8">
       <div className="text-center max-w-xl mx-auto">
-        <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+        <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight">
           Frequently Asked Questions
         </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-2">
+        <p className="text-xs sm:text-sm text-[var(--text-secondary)] mt-2">
           Everything you need to know about our seafood sourcing, cutting yields, packaging, and deliveries.
         </p>
       </div>
@@ -48,24 +48,24 @@ export default function FAQPage() {
         {faqs.map((faq, i) => (
           <details
             key={i}
-            className="bg-white rounded-2xl border border-slate-200 p-5 group open:shadow-xs transition-all cursor-pointer"
+            className="bg-[var(--surface)] rounded-2xl border border-[var(--border)] p-5 group open:shadow-xs transition-all cursor-pointer"
           >
-            <summary className="font-bold text-sm text-slate-900 flex items-center justify-between list-none">
+            <summary className="font-bold text-sm text-[var(--text-primary)] flex items-center justify-between list-none">
               <span>{faq.q}</span>
-              <span className="text-teal-600 font-black text-lg group-open:rotate-45 transition-transform">
+              <span className="text-[#00D2C4] font-black text-lg group-open:rotate-45 transition-transform">
                 +
               </span>
             </summary>
-            <p className="text-xs text-slate-600 mt-3 leading-relaxed border-t border-slate-100 pt-3">
+            <p className="text-xs text-[var(--text-secondary)] mt-3 leading-relaxed border-t border-[var(--border)] pt-3">
               {faq.a}
             </p>
           </details>
         ))}
       </div>
 
-      <div className="text-center pt-6 text-xs text-slate-500">
+      <div className="text-center pt-6 text-xs text-[var(--text-secondary)]">
         Still have a question?{' '}
-        <Link href="/contact" className="text-teal-700 font-bold underline">
+        <Link href="/contact" className="text-[#00D2C4] font-bold hover:underline">
           Contact our helpline
         </Link>
       </div>

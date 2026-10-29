@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ThemeProvider } from '@/context/ThemeContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { WishlistProvider } from '@/context/WishlistContext';
@@ -39,22 +40,46 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-800 antialiased selection:bg-teal-100 selection:text-teal-900">
-        <AuthProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <LocationProvider>
-                <AnnouncementBar />
-                <Header />
-                <main className="flex-1">{children}</main>
-                <Footer />
-                <CartDrawer />
-                <LocationModal />
-              </LocationProvider>
-            </WishlistProvider>
-          </CartProvider>
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function() {
+              try {
+                var stored = localStorage.getItem('fishbasket-theme');
+                var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var isDark = stored === 'dark' || (!stored && systemDark);
+                if (isDark) {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                  document.documentElement.style.colorScheme = 'dark';
+                } else {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.setAttribute('data-theme', 'light');
+                  document.documentElement.style.colorScheme = 'light';
+                }
+              } catch (e) {}
+            })();`,
+          }}
+        />
+      </head>
+      <body className="min-h-screen flex flex-col bg-[#F4F7F6] dark:bg-[#0B131A] text-[#112233] dark:text-[#EAF2F8] antialiased selection:bg-[#00D2C4]/25 selection:text-[#00D2C4]">
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <LocationProvider>
+                  <AnnouncementBar />
+                  <Header />
+                  <main className="flex-1">{children}</main>
+                  <Footer />
+                  <CartDrawer />
+                  <LocationModal />
+                </LocationProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

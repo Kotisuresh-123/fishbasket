@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { dbService } from '@/lib/db';
+import { dbService, toDbId, toAppId } from '@/lib/db';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -15,7 +15,11 @@ export async function GET(request: Request) {
   });
 
   if (fishermanId) {
-    products = products.filter((p) => p.fisherman_id === fishermanId);
+    const dbFid = toDbId(fishermanId);
+    const appFid = toAppId(fishermanId);
+    products = products.filter(
+      (p) => p.fisherman_id === fishermanId || p.fisherman_id === dbFid || p.fisherman_id === appFid
+    );
   }
 
   return NextResponse.json({ success: true, count: products.length, products });

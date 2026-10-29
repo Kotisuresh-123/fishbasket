@@ -21,22 +21,22 @@ export default function WishlistPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-black text-slate-900 tracking-tight">Saved Seafood Wishlist</h2>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <h2 className="text-xl font-black text-[var(--text-primary)] tracking-tight">Saved Seafood Wishlist</h2>
+        <p className="text-xs text-[var(--text-secondary)] mt-0.5">
           Your favorite fish, prawns, and crabs bookmarked for quick ordering
         </p>
       </div>
 
       {wishlistProducts.length === 0 ? (
-        <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-3">
-          <Heart className="w-10 h-10 text-slate-300 mx-auto" />
-          <h3 className="font-bold text-slate-800 text-base">Your wishlist is empty</h3>
-          <p className="text-xs text-slate-400">
+        <div className="bg-[var(--surface)] p-12 rounded-2xl border border-[var(--border)] text-center space-y-3">
+          <Heart className="w-10 h-10 text-[var(--text-secondary)] opacity-50 mx-auto" />
+          <h3 className="font-bold text-[var(--text-primary)] text-base">Your wishlist is empty</h3>
+          <p className="text-xs text-[var(--text-secondary)]">
             Click the heart icon on any product to save it to your wishlist.
           </p>
           <Link
             href="/shop"
-            className="inline-block mt-2 px-4 py-2 bg-teal-600 text-white font-bold text-xs rounded-xl"
+            className="inline-block mt-2 px-4 py-2.5 btn-aqua font-bold text-xs rounded-xl shadow-xs"
           >
             Explore Fresh Catches
           </Link>

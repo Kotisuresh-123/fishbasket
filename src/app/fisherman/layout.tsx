@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
+import ThemeToggle from '@/components/ThemeToggle';
 import {
   Anchor,
   Fish,
@@ -45,24 +46,24 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
   // If unauthenticated or not a fisherman, render access gate
   if (!isAuthenticated || role !== 'fisherman') {
     return (
-      <div className="max-w-md mx-auto my-20 p-8 bg-white rounded-3xl border border-slate-200 shadow-sm text-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
+      <div className="max-w-md mx-auto my-20 p-8 bg-[var(--surface)] rounded-3xl border border-[var(--border)] shadow-sm text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-500/20">
           <AlertOctagon className="w-7 h-7" />
         </div>
-        <h2 className="text-xl font-black text-slate-900">Fisherman Portal Access</h2>
-        <p className="text-xs text-slate-500 leading-relaxed">
+        <h2 className="text-xl font-black text-[var(--text-primary)]">Fisherman Portal Access</h2>
+        <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
           This portal is reserved for registered fishermen. Please sign in with your fisherman credentials or submit an application.
         </p>
         <div className="pt-2 flex flex-col gap-2">
           <Link
             href="/login"
-            className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors"
+            className="w-full py-2.5 btn-aqua font-bold text-xs rounded-xl shadow-xs transition-all"
           >
             Sign In with Fisherman Account
           </Link>
           <Link
             href="/register-fisherman"
-            className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+            className="w-full py-2.5 bg-slate-100 dark:bg-slate-800 text-[var(--text-primary)] hover:bg-slate-200 dark:hover:bg-slate-700 font-bold text-xs rounded-xl transition-colors"
           >
             Register as a Fisherman
           </Link>
@@ -75,29 +76,29 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
   if (user?.status === 'pending') {
     return (
       <div className="max-w-xl mx-auto my-16 px-4">
-        <div className="bg-white rounded-3xl border border-amber-200/90 p-8 shadow-sm text-center space-y-5">
-          <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto shadow-inner">
+        <div className="bg-[var(--surface)] rounded-3xl border border-amber-500/30 p-8 shadow-sm text-center space-y-5">
+          <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-500/20">
             <Clock className="w-8 h-8 animate-pulse" />
           </div>
           <div className="space-y-1.5">
-            <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-amber-100 text-amber-900 rounded-full">
+            <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 bg-amber-500/10 text-amber-700 dark:text-amber-400 rounded-full border border-amber-500/20">
               Pending Approval
             </span>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight pt-1">
+            <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight pt-1">
               Welcome, {user.display_name || user.full_name}!
             </h1>
-            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+            <p className="text-xs text-[var(--text-secondary)] max-w-md mx-auto leading-relaxed">
               Your account is waiting for admin approval. Once approved, you will be able to add and manage your fresh catches.
             </p>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 text-left space-y-2 text-xs">
-            <div className="font-bold text-slate-800">Your Registered Details:</div>
-            <div className="grid grid-cols-2 gap-2 text-slate-600 text-[11px]">
-              <div><strong>Fisherman Name:</strong> {user.display_name || user.full_name}</div>
-              <div><strong>Email:</strong> {user.email}</div>
-              <div><strong>Landing Dock:</strong> {user.dock_location || 'Visakhapatnam Harbor'}</div>
-              <div><strong>Status:</strong> <span className="font-bold text-amber-700">Pending Admin Approval</span></div>
+          <div className="p-4 bg-slate-100/50 dark:bg-slate-800/40 rounded-2xl border border-[var(--border)] text-left space-y-2 text-xs">
+            <div className="font-bold text-[var(--text-primary)]">Your Registered Details:</div>
+            <div className="grid grid-cols-2 gap-2 text-[var(--text-secondary)] text-[11px]">
+              <div><strong className="text-[var(--text-primary)]">Fisherman Name:</strong> {user.display_name || user.full_name}</div>
+              <div><strong className="text-[var(--text-primary)]">Email:</strong> {user.email}</div>
+              <div><strong className="text-[var(--text-primary)]">Landing Dock:</strong> {user.dock_location || 'Visakhapatnam Harbor'}</div>
+              <div><strong className="text-[var(--text-primary)]">Status:</strong> <span className="font-bold text-amber-600 dark:text-amber-400">Pending Admin Approval</span></div>
             </div>
           </div>
 
@@ -105,7 +106,7 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
             <button
               onClick={handleManualCheck}
               disabled={checkingStatus}
-              className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-1.5"
+              className="px-5 py-2.5 btn-aqua disabled:opacity-50 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${checkingStatus ? 'animate-spin' : ''}`} />
               <span>{checkingStatus ? 'Checking...' : 'Check Approval Status'}</span>
@@ -115,7 +116,7 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
                 logout();
                 router.push('/login');
               }}
-              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5"
+              className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-[var(--text-primary)] font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
@@ -129,12 +130,12 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
   // If fisherman status is SUSPENDED or REJECTED
   if (user?.status === 'suspended' || user?.status === 'rejected') {
     return (
-      <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-rose-200 shadow-sm text-center space-y-4">
-        <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto">
+      <div className="max-w-md mx-auto my-16 p-8 bg-[var(--surface)] rounded-3xl border border-rose-500/30 shadow-sm text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto border border-rose-500/20">
           <AlertOctagon className="w-7 h-7" />
         </div>
-        <h2 className="text-xl font-black text-slate-900">Account Selling Suspended</h2>
-        <p className="text-xs text-slate-500 leading-relaxed">
+        <h2 className="text-xl font-black text-[var(--text-primary)]">Account Selling Suspended</h2>
+        <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
           Selling has been disabled for your fisherman account. Please contact marketplace administration for assistance.
         </p>
         <button
@@ -142,7 +143,7 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
             logout();
             router.push('/login');
           }}
-          className="px-5 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl"
+          className="px-5 py-2.5 bg-slate-800 dark:bg-slate-700 text-white font-bold text-xs rounded-xl"
         >
           Sign Out
         </button>
@@ -161,34 +162,35 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50/60 pb-16">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--text-primary)] pb-16">
       {/* Top Fisherman Bar */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
+      <div className="bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-[#00D2C4] border border-teal-500/20 flex items-center justify-center font-bold shadow-xs">
               <Anchor className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-teal-700 tracking-wider block">
+              <span className="text-[10px] uppercase font-bold text-teal-600 dark:text-[#00D2C4] tracking-wider block">
                 Fisherman Dashboard
               </span>
-              <h1 className="text-sm font-bold text-slate-900 leading-none">
+              <h1 className="text-sm font-bold text-[var(--text-primary)] leading-none">
                 {user?.display_name || user?.full_name}
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-700 font-bold text-[11px] rounded-lg border border-emerald-200">
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold text-[11px] rounded-lg border border-emerald-500/20">
               <ShieldCheck className="w-3.5 h-3.5" /> Approved Fisherman
             </span>
+            <ThemeToggle />
             <button
               onClick={() => {
                 logout();
                 router.push('/login');
               }}
-              className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-colors"
+              className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
               title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
@@ -197,7 +199,7 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Tab Navigation */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto border-t border-slate-100 py-1.5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto border-t border-[var(--border)] py-1.5">
           {navLinks.map((link) => {
             const Icon = link.icon;
             const isActive =
@@ -210,8 +212,8 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
                 href={link.href}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap ${
                   isActive
-                    ? 'bg-teal-700 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? 'btn-aqua shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-100 dark:hover:bg-slate-800/60'
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />

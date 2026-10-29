@@ -57,20 +57,20 @@ export default function AdminReviewsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight">Review Moderation</h1>
-        <p className="text-xs text-slate-500 mt-0.5">
+        <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">Review Moderation</h1>
+        <p className="text-xs text-[var(--text-secondary)] mt-0.5">
           Approve, filter, and moderate customer reviews across all seafood products
         </p>
       </div>
 
       <div className="space-y-3">
         {reviews.map((r) => (
-          <div key={r.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-3 text-xs">
+          <div key={r.id} className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] shadow-xs space-y-3 text-xs">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900">{r.author_name}</span>
+                <span className="font-bold text-[var(--text-primary)]">{r.author_name}</span>
                 {r.is_verified_buyer && (
-                  <span className="text-[10px] text-teal-700 font-semibold bg-teal-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-teal-200">
+                  <span className="text-[10px] text-[#00D2C4] font-semibold bg-[#00D2C4]/10 px-2 py-0.5 rounded-full flex items-center gap-1 border border-[#00D2C4]/20">
                     <ShieldCheck className="w-3 h-3" /> Verified Buyer
                   </span>
                 )}
@@ -84,31 +84,31 @@ export default function AdminReviewsPage() {
             </div>
 
             <div>
-              <h4 className="font-bold text-slate-900 text-xs">{r.title}</h4>
-              <p className="text-slate-600 mt-1 leading-relaxed">
+              <h4 className="font-bold text-[var(--text-primary)] text-xs">{r.title}</h4>
+              <p className="text-[var(--text-secondary)] mt-1 leading-relaxed">
                 &ldquo;{r.comment}&rdquo;
               </p>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[10px] text-slate-400">
+            <div className="pt-2 border-t border-[var(--border)] flex items-center justify-between">
+              <span className="text-[10px] text-[var(--text-secondary)]">
                 Submitted on {new Date(r.created_at).toLocaleDateString()}
               </span>
 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleToggleApprove(r.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors ${
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
                     r.is_approved
-                      ? 'bg-emerald-100 text-emerald-800'
-                      : 'bg-slate-100 text-slate-700 hover:bg-emerald-50'
+                      ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/20'
+                      : 'btn-aqua'
                   }`}
                 >
                   {r.is_approved ? 'Approved ✓' : 'Approve Review'}
                 </button>
                 <button
                   onClick={() => handleDelete(r.id)}
-                  className="p-1.5 text-slate-300 hover:text-rose-600"
+                  className="p-1.5 text-[var(--text-secondary)] hover:text-rose-500 cursor-pointer transition-colors"
                   title="Delete Review"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

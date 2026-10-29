@@ -17,9 +17,9 @@ export default function NewsletterForm() {
 
   if (subscribed) {
     return (
-      <div className="p-3 bg-teal-500/20 border border-teal-500/40 rounded-xl text-teal-300 text-xs flex items-center justify-center gap-2 max-w-md mx-auto">
-        <CheckCircle2 className="w-4 h-4 text-teal-400" />
-        <span>Subscribed! You will receive daily harbor morning catch alerts.</span>
+      <div className="p-3 bg-[#00D2C4]/20 border border-[#00D2C4]/40 rounded-xl text-[#00D2C4] text-xs flex items-center justify-center gap-2 max-w-md mx-auto">
+        <CheckCircle2 className="w-4 h-4 text-[#00D2C4]" />
+        <span className="font-semibold">Subscribed! You will receive daily harbor morning catch alerts.</span>
       </div>
     );
   }
@@ -35,11 +35,11 @@ export default function NewsletterForm() {
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder="Enter your email address"
-        className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-xs focus:outline-none focus:border-teal-500"
+        className="flex-1 px-4 py-2.5 rounded-xl bg-slate-800/90 border border-slate-700 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-[#00D2C4] focus:ring-1 focus:ring-[#00D2C4]"
       />
       <button
         type="submit"
-        className="px-6 py-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-xs rounded-xl transition-colors shadow-sm"
+        className="px-6 py-2.5 btn-aqua rounded-xl text-xs font-bold transition-all shadow-sm"
       >
         Subscribe
       </button>

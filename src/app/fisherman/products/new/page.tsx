@@ -254,16 +254,16 @@ export default function NewFishermanProductPage() {
         <div>
           <Link
             href="/fisherman/products"
-            className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 mb-1 font-semibold"
+            className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 mb-1 font-semibold transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to My Catches
           </Link>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">Add Catch</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">Add Catch</h1>
+          <p className="text-xs text-[var(--text-secondary)]">
             Publish your fresh seafood catch directly to the marketplace
           </p>
         </div>
-        <div className="text-xs font-bold text-teal-800 bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-200">
+        <div className="text-xs font-bold text-teal-700 dark:text-[#00D2C4] bg-teal-500/10 px-3 py-1.5 rounded-xl border border-teal-500/20">
           Step {step} of 4
         </div>
       </div>
@@ -280,10 +280,10 @@ export default function NewFishermanProductPage() {
             key={s.num}
             className={`p-2.5 rounded-xl text-center transition-all border ${
               step === s.num
-                ? 'bg-teal-700 text-white border-teal-700 shadow-xs'
+                ? 'bg-[#00D2C4] text-[#112233] border-[#00D2C4] shadow-xs font-bold'
                 : step > s.num
-                ? 'bg-emerald-50 text-emerald-800 border-emerald-200 font-semibold'
-                : 'bg-white text-slate-400 border-slate-200'
+                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 font-semibold'
+                : 'bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)]'
             }`}
           >
             <div className="text-[11px] font-bold">
@@ -295,31 +295,31 @@ export default function NewFishermanProductPage() {
 
       {/* Error or Success Alert */}
       {errorMsg && (
-        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 text-xs flex items-center gap-2 animate-in fade-in">
-          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+        <div className="p-3.5 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-700 dark:text-rose-400 text-xs flex items-center gap-2 animate-in fade-in">
+          <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0" />
           <span className="font-medium">{errorMsg}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-800 text-xs flex items-center gap-2 animate-in fade-in">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-700 dark:text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in">
+          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
           <span className="font-bold">{successMsg}</span>
         </div>
       )}
 
       {/* Main Step Cards */}
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
+      <div className="bg-[var(--surface)] p-6 rounded-3xl border border-[var(--border)] shadow-xs space-y-5">
         {/* STEP 1: Basic Details */}
         {step === 1 && (
           <div className="space-y-4 animate-in fade-in">
-            <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
-              <Fish className="w-4 h-4 text-teal-700" />
+            <h3 className="font-bold text-sm text-[var(--text-primary)] border-b border-[var(--border)] pb-2 flex items-center gap-2">
+              <Fish className="w-4 h-4 text-teal-600 dark:text-[#00D2C4]" />
               <span>Step 1: Catch & Category Details</span>
             </h3>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                 Catch / Product Name <span className="text-rose-500">*</span>
               </label>
               <input
@@ -328,19 +328,19 @@ export default function NewFishermanProductPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Fresh Silver Pomfret, White Prawns"
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                   Seafood Category <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={categoryId}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 bg-white font-medium"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
                 >
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -351,7 +351,7 @@ export default function NewFishermanProductPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                   Species / Local Name (Optional)
                 </label>
                 <input
@@ -359,13 +359,13 @@ export default function NewFishermanProductPage() {
                   value={varietySpecies}
                   onChange={(e) => setVarietySpecies(e.target.value)}
                   placeholder="e.g. Pampus argenteus / Chanduva"
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4] font-medium"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                 Harbor Dock Landing Location
               </label>
               <input
@@ -373,12 +373,12 @@ export default function NewFishermanProductPage() {
                 value={originSource}
                 onChange={(e) => setOriginSource(e.target.value)}
                 placeholder="e.g. Visakhapatnam Harbor Pier #3"
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                 Catch Description (Optional)
               </label>
               <textarea
@@ -386,7 +386,7 @@ export default function NewFishermanProductPage() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Describe texture, size, recommended dishes (curry, fry, tandoor)..."
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
           </div>
@@ -395,14 +395,14 @@ export default function NewFishermanProductPage() {
         {/* STEP 2: Price & Quantity */}
         {step === 2 && (
           <div className="space-y-4 animate-in fade-in">
-            <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
-              <Scale className="w-4 h-4 text-teal-700" />
+            <h3 className="font-bold text-sm text-[var(--text-primary)] border-b border-[var(--border)] pb-2 flex items-center gap-2">
+              <Scale className="w-4 h-4 text-teal-600 dark:text-[#00D2C4]" />
               <span>Step 2: Pricing & Stock Inventory</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                   Price in Rupees (₹) <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -412,18 +412,18 @@ export default function NewFishermanProductPage() {
                   value={pricePerUnit}
                   onChange={(e) => setPricePerUnit(e.target.value)}
                   placeholder="e.g. 450"
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-bold"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4] font-bold"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                   Pricing Unit <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={unit}
                   onChange={(e) => setUnit(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 bg-white font-medium"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
                 >
                   <option value="kg">Per Kilogram (kg)</option>
                   <option value="500g">Per 500 Grams (500g)</option>
@@ -433,7 +433,7 @@ export default function NewFishermanProductPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                   Available Quantity in Stock <span className="text-rose-500">*</span>
                 </label>
                 <input
@@ -443,15 +443,15 @@ export default function NewFishermanProductPage() {
                   value={stockQuantity}
                   onChange={(e) => setStockQuantity(e.target.value)}
                   placeholder="e.g. 25"
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4] font-medium"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
+                <p className="text-[11px] text-[var(--text-secondary)] mt-1">
                   When this reaches 0, the catch listing will automatically show as Sold Out.
                 </p>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                   Minimum Order Quantity
                 </label>
                 <input
@@ -459,7 +459,7 @@ export default function NewFishermanProductPage() {
                   min={1}
                   value={minOrderQty}
                   onChange={(e) => setMinOrderQty(e.target.value)}
-                  className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                  className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4] font-medium"
                 />
               </div>
             </div>
@@ -469,13 +469,13 @@ export default function NewFishermanProductPage() {
         {/* STEP 3: Photos & Preparation Options */}
         {step === 3 && (
           <div className="space-y-4 animate-in fade-in">
-            <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
-              <Camera className="w-4 h-4 text-teal-700" />
+            <h3 className="font-bold text-sm text-[var(--text-primary)] border-b border-[var(--border)] pb-2 flex items-center gap-2">
+              <Camera className="w-4 h-4 text-teal-600 dark:text-[#00D2C4]" />
               <span>Step 3: Catch Photo & Preparation Cuts</span>
             </h3>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
                 Product Image URL <span className="text-rose-500">*</span>
               </label>
               <input
@@ -484,31 +484,31 @@ export default function NewFishermanProductPage() {
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
                 placeholder="https://images.unsplash.com/..."
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
 
             {imageUrl && (
-              <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-slate-100 flex-shrink-0 border border-slate-200">
+              <div className="flex items-center gap-3 p-3 bg-[var(--surface-elevated)] rounded-2xl border border-[var(--border)]">
+                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-[var(--surface)] flex-shrink-0 border border-[var(--border)]">
                   <Image src={imageUrl} alt="Catch preview" fill className="object-cover" />
                 </div>
                 <div className="text-xs">
-                  <span className="font-bold text-slate-800 block">Photo Preview</span>
-                  <span className="text-[11px] text-slate-400">Displayed on storefront cards</span>
+                  <span className="font-bold text-[var(--text-primary)] block">Photo Preview</span>
+                  <span className="text-[11px] text-[var(--text-secondary)]">Displayed on storefront cards</span>
                 </div>
               </div>
             )}
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="block text-xs font-bold text-slate-700">
+                <label className="block text-xs font-bold text-[var(--text-primary)]">
                   Supported Cleaning & Cut Options
                 </label>
                 <button
                   type="button"
                   onClick={handleAddPrep}
-                  className="text-xs text-teal-700 font-bold flex items-center gap-1 hover:underline"
+                  className="text-xs text-teal-600 dark:text-[#00D2C4] font-bold flex items-center gap-1 hover:underline"
                 >
                   <Plus className="w-3.5 h-3.5" /> Add Cut Option
                 </button>
@@ -518,7 +518,7 @@ export default function NewFishermanProductPage() {
                 {prepOptions.map((opt, idx) => (
                   <div
                     key={opt.id}
-                    className="flex items-center gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs"
+                    className="flex items-center gap-2 p-2.5 bg-[var(--surface-elevated)] rounded-xl border border-[var(--border)] text-xs"
                   >
                     <input
                       type="text"
@@ -529,13 +529,13 @@ export default function NewFishermanProductPage() {
                         setPrepOptions(updated);
                       }}
                       placeholder="Cut Name (e.g. Curry Cut)"
-                      className="flex-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white font-medium"
+                      className="flex-1 px-2.5 py-1.5 rounded-lg bg-[var(--surface)] border border-[var(--border)] text-[var(--text-primary)] font-medium"
                     />
                     <button
                       type="button"
                       onClick={() => handleRemovePrep(idx)}
                       disabled={prepOptions.length <= 1}
-                      className="p-1.5 text-slate-300 hover:text-rose-600 disabled:opacity-30"
+                      className="p-1.5 text-[var(--text-secondary)] hover:text-rose-500 disabled:opacity-30"
                       title="Remove cut"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -550,25 +550,25 @@ export default function NewFishermanProductPage() {
         {/* STEP 4: Review & Publish */}
         {step === 4 && (
           <div className="space-y-5 animate-in fade-in">
-            <h3 className="font-bold text-sm text-slate-900 border-b border-slate-100 pb-2 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-teal-700" />
+            <h3 className="font-bold text-sm text-[var(--text-primary)] border-b border-[var(--border)] pb-2 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-teal-600 dark:text-[#00D2C4]" />
               <span>Step 4: Review Your Catch Details</span>
             </h3>
 
             {/* Clean Summary Card */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-3 text-xs">
-              <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-200">
+            <div className="bg-[var(--surface-elevated)] rounded-2xl p-4 border border-[var(--border)] space-y-3 text-xs">
+              <div className="flex items-start justify-between gap-3 pb-3 border-b border-[var(--border)]">
                 <div className="flex items-center gap-3">
-                  <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+                  <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-[var(--surface)] border border-[var(--border)] flex-shrink-0">
                     <Image src={imageUrl} alt={name} fill className="object-cover" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-sm text-slate-900">{name}</h4>
-                    <span className="text-teal-700 font-semibold text-[11px]">
+                    <h4 className="font-bold text-sm text-[var(--text-primary)]">{name}</h4>
+                    <span className="text-teal-600 dark:text-[#00D2C4] font-semibold text-[11px]">
                       {selectedCategoryName}
                     </span>
                     {varietySpecies && (
-                      <span className="text-slate-400 text-[11px] block italic">
+                      <span className="text-[var(--text-secondary)] text-[11px] block italic">
                         {varietySpecies}
                       </span>
                     )}
@@ -576,25 +576,25 @@ export default function NewFishermanProductPage() {
                 </div>
 
                 <div className="text-right">
-                  <div className="text-base font-black text-slate-900">
+                  <div className="text-base font-black text-[var(--text-primary)]">
                     {formatINR(parseFloat(pricePerUnit) || 0)}
                   </div>
-                  <span className="text-[11px] text-slate-500 font-medium">per {unit}</span>
+                  <span className="text-[11px] text-[var(--text-secondary)] font-medium">per {unit}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+              <div className="grid grid-cols-2 gap-2 text-[11px] text-[var(--text-secondary)]">
                 <div>
-                  <strong>Stock:</strong> {stockQuantity} {unit}
+                  <strong className="text-[var(--text-primary)]">Stock:</strong> {stockQuantity} {unit}
                 </div>
                 <div>
-                  <strong>Fisherman:</strong> {user?.display_name || user?.full_name}
+                  <strong className="text-[var(--text-primary)]">Fisherman:</strong> {user?.display_name || user?.full_name}
                 </div>
                 <div>
-                  <strong>Origin / Dock:</strong> {originSource}
+                  <strong className="text-[var(--text-primary)]">Origin / Dock:</strong> {originSource}
                 </div>
                 <div>
-                  <strong>Cuts:</strong> {prepOptions.map((p) => p.name).join(', ')}
+                  <strong className="text-[var(--text-primary)]">Cuts:</strong> {prepOptions.map((p) => p.name).join(', ')}
                 </div>
               </div>
             </div>
@@ -602,13 +602,13 @@ export default function NewFishermanProductPage() {
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div className="flex items-center justify-between pt-4 border-t border-[var(--border)]">
           {step > 1 ? (
             <button
               type="button"
               onClick={handleBack}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 bg-[var(--surface-elevated)] hover:bg-[var(--surface-elevated)]/80 text-[var(--text-primary)] border border-[var(--border)] font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5"
             >
               <ArrowLeft className="w-3.5 h-3.5" /> Back
             </button>
@@ -620,7 +620,7 @@ export default function NewFishermanProductPage() {
             <button
               type="button"
               onClick={handleNext}
-              className="px-5 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-xs"
+              className="btn-aqua px-5 py-2.5 font-bold text-xs rounded-xl transition-colors flex items-center gap-1.5 shadow-xs"
             >
               <span>Next</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -630,7 +630,7 @@ export default function NewFishermanProductPage() {
               type="button"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="px-6 py-2.5 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl transition-colors flex items-center gap-2 shadow-sm"
+              className="btn-aqua px-6 py-2.5 disabled:opacity-50 font-bold text-xs rounded-xl transition-colors flex items-center gap-2 shadow-sm"
             >
               {isSubmitting ? (
                 <span>Publishing Catch...</span>

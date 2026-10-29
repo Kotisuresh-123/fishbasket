@@ -120,10 +120,10 @@ export default function EditFishermanProductPage() {
 
   if (errorMsg && !product) {
     return (
-      <div className="max-w-md mx-auto my-12 p-6 bg-white rounded-2xl border border-rose-200 text-center space-y-3">
+      <div className="max-w-md mx-auto my-12 p-6 bg-[var(--surface)] rounded-2xl border border-rose-500/20 text-center space-y-3">
         <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
-        <h2 className="font-bold text-sm text-slate-900">{errorMsg}</h2>
-        <Link href="/fisherman/products" className="text-xs font-bold text-teal-700 underline block">
+        <h2 className="font-bold text-sm text-[var(--text-primary)]">{errorMsg}</h2>
+        <Link href="/fisherman/products" className="text-xs font-bold text-teal-600 dark:text-[#00D2C4] underline block">
           Back to Listings
         </Link>
       </div>
@@ -135,47 +135,47 @@ export default function EditFishermanProductPage() {
       <div>
         <Link
           href="/fisherman/products"
-          className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 mb-1 font-semibold"
+          className="text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] flex items-center gap-1 mb-1 font-semibold transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" /> Back to My Listings
         </Link>
-        <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+        <h1 className="text-2xl font-black text-[var(--text-primary)] tracking-tight">
           Edit Catch: {product?.name}
         </h1>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-[var(--text-secondary)]">
           Update prices, available catch stock, and custom cleaning options
         </p>
       </div>
 
       {successMsg && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
           <Check className="w-4 h-4 flex-shrink-0" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {errorMsg && (
-        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-medium">
+        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-700 dark:text-rose-400 text-xs font-medium">
           {errorMsg}
         </div>
       )}
 
       <form onSubmit={handleUpdate} className="space-y-6">
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs space-y-4">
+        <div className="bg-[var(--surface)] p-6 rounded-2xl border border-[var(--border)] shadow-xs space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Catch Title</label>
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">Catch Title</label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Price (₹ per {product?.unit})
               </label>
               <input
@@ -184,12 +184,12 @@ export default function EditFishermanProductPage() {
                 required
                 value={pricePerUnit}
                 onChange={(e) => setPricePerUnit(parseFloat(e.target.value) || 0)}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Discount Price (₹, Optional)
               </label>
               <input
@@ -197,12 +197,12 @@ export default function EditFishermanProductPage() {
                 min={1}
                 value={discountPrice || ''}
                 onChange={(e) => setDiscountPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Live Catch Stock ({product?.unit})
               </label>
               <input
@@ -211,18 +211,18 @@ export default function EditFishermanProductPage() {
                 required
                 value={stockQuantity}
                 onChange={(e) => setStockQuantity(parseFloat(e.target.value) || 0)}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Public Listing Status
               </label>
               <select
                 value={isAvailable ? 'true' : 'false'}
                 onChange={(e) => setIsAvailable(e.target.value === 'true')}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium bg-white"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               >
                 <option value="true">Active (Purchasable)</option>
                 <option value="false">Hidden / Out of Stock</option>
@@ -230,7 +230,7 @@ export default function EditFishermanProductPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Seafood Image URL
               </label>
               <input
@@ -238,19 +238,19 @@ export default function EditFishermanProductPage() {
                 required
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
                 Catch Description
               </label>
               <textarea
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-teal-500 font-medium"
+                className="w-full px-3.5 py-2 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
               />
             </div>
           </div>
@@ -259,14 +259,14 @@ export default function EditFishermanProductPage() {
         <div className="flex items-center justify-end gap-3">
           <Link
             href="/fisherman/products"
-            className="px-5 py-2.5 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold"
+            className="px-5 py-2.5 border border-[var(--border)] bg-[var(--surface-elevated)] text-[var(--text-primary)] rounded-xl text-xs font-bold transition-colors"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="px-7 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="btn-aqua px-7 py-3 font-bold text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             {isSubmitting ? 'Saving...' : 'Save Listing Updates'}
           </button>
