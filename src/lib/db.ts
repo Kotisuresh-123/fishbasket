@@ -365,7 +365,7 @@ export const dbService = {
 
       const rows = await queryDb(
         `INSERT INTO profiles (id, auth_id, email, full_name, phone, role, status, password_hash, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, 'customer', 'approved', $5, NOW(), NOW())
+         VALUES ($1, $2, $3, $4, $5, 'customer', 'approved', $6, NOW(), NOW())
          ON CONFLICT (email) DO UPDATE SET
            auth_id = COALESCE(profiles.auth_id, EXCLUDED.auth_id),
            full_name = EXCLUDED.full_name,
