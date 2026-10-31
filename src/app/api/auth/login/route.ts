@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { dbService } from '@/lib/db';
+import { setSessionCookie } from '@/lib/session';
 
 export async function POST(request: Request) {
   try {
@@ -24,11 +25,20 @@ export async function POST(request: Request) {
     // Do not return password hash
     const { password_hash, ...safeUser } = authResult.user;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: safeUser,
       message: authResult.message || 'Login successful',
     });
+
+    // Authoritative signed HttpOnly session cookie
+    setSessionCookie(response, {
+      userId: safeUser.id,
+      email: safeUser.email,
+      role: safeUser.role as any,
+    });
+
+    return response;
   } catch (err: any) {
     return NextResponse.json(
       { success: false, message: err.message || 'Internal authentication error.' },

@@ -2,26 +2,49 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Order, OrderStatus } from '@/types';
+import { Order } from '@/types';
 import { formatINR } from '@/lib/cartUtils';
-import { Package, ArrowRight, Truck, RefreshCw, Scissors } from 'lucide-react';
+import { Package, Truck, RefreshCw, AlertCircle } from 'lucide-react';
 
 export default function CustomerOrdersPage() {
-  const { user } = useAuth();
+  const { user, isLoaded } = useAuth();
+  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<'all' | 'active' | 'delivered'>('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/api/orders')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setOrders(data.orders);
+    if (!isLoaded) return;
+
+    if (!user) {
+      setLoading(false);
+      router.push('/login?redirect=/account/orders');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    fetch(`/api/orders?userId=${encodeURIComponent(user.id)}`)
+      .then(async (res) => {
+        if (res.status === 401) {
+          router.push('/login?redirect=/account/orders');
+          return;
+        }
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          throw new Error(data.message || data.error || 'Failed to load orders');
+        }
+        setOrders(data.orders || []);
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Failed to fetch orders');
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [user?.id, isLoaded, router]);
 
   const filteredOrders = orders.filter((o) => {
     if (filter === 'active') return o.status !== 'delivered' && o.status !== 'cancelled';
@@ -34,6 +57,35 @@ export default function CustomerOrdersPage() {
       <div className="bg-[var(--surface)] p-12 rounded-2xl border border-[var(--border)] text-center">
         <RefreshCw className="w-6 h-6 animate-spin text-teal-600 dark:text-[#00D2C4] mx-auto mb-2" />
         <span className="text-xs text-[var(--text-secondary)] font-semibold">Loading orders...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-[var(--surface)] p-8 rounded-2xl border border-red-500/20 text-center space-y-3">
+        <AlertCircle className="w-8 h-8 text-red-500 mx-auto" />
+        <h3 className="font-bold text-[var(--text-primary)] text-sm">Unable to load orders</h3>
+        <p className="text-xs text-[var(--text-secondary)]">{error}</p>
+        <button
+          onClick={() => {
+            if (user) {
+              setLoading(true);
+              setError(null);
+              fetch(`/api/orders?userId=${encodeURIComponent(user.id)}`)
+                .then(async (res) => {
+                  const data = await res.json();
+                  if (!res.ok || !data.success) throw new Error(data.message || data.error || 'Failed to load orders');
+                  setOrders(data.orders || []);
+                })
+                .catch((err) => setError(err instanceof Error ? err.message : 'Failed to fetch orders'))
+                .finally(() => setLoading(false));
+            }
+          }}
+          className="px-4 py-2 btn-aqua font-bold text-xs rounded-xl shadow-xs"
+        >
+          Try Again
+        </button>
       </div>
     );
   }

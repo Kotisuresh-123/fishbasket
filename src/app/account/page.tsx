@@ -9,18 +9,24 @@ import { formatINR } from '@/lib/cartUtils';
 import { Package, MapPin, Heart, ArrowRight, Truck, Clock } from 'lucide-react';
 
 export default function AccountOverviewPage() {
-  const { user, defaultAddress } = useAuth();
+  const { user, defaultAddress, isLoaded } = useAuth();
   const { wishlistCount } = useWishlist();
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    fetch('/api/orders')
+    if (!isLoaded) return;
+    if (!user) {
+      setOrders([]);
+      return;
+    }
+
+    fetch(`/api/orders?userId=${encodeURIComponent(user.id)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) setOrders(data.orders);
+        if (data.success && Array.isArray(data.orders)) setOrders(data.orders);
       })
       .catch(() => {});
-  }, []);
+  }, [user?.id, isLoaded]);
 
   const latestOrder = orders[0];
 

@@ -1,8 +1,9 @@
 import React from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { dbService } from '@/lib/db';
+import { notFound, redirect } from 'next/navigation';
+import { dbService, toDbId } from '@/lib/db';
 import { formatINR } from '@/lib/cartUtils';
+import { getSessionFromRequest } from '@/lib/session';
 import { Package, Truck, ArrowLeft, Printer, MapPin, Clock } from 'lucide-react';
 
 interface OrderDetailPageProps {
@@ -13,9 +14,25 @@ interface OrderDetailPageProps {
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { id } = await params;
-  const order = await dbService.getOrderById(id);
 
+  // 1. Authoritative server session verification
+  const session = await getSessionFromRequest();
+  if (!session) {
+    redirect(`/login?redirect=/account/orders/${encodeURIComponent(id)}`);
+  }
+
+  // 2. Fetch order
+  const order = await dbService.getOrderById(id);
   if (!order) {
+    notFound();
+  }
+
+  // 3. Ownership check: Customers can access ONLY their own orders
+  const isOwner = toDbId(order.user_id) === toDbId(session.userId);
+  const isAdmin = session.role === 'admin';
+
+  if (!isOwner && !isAdmin) {
+    // Safe denial: return 404 to prevent cross-customer order snooping
     notFound();
   }
 

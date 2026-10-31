@@ -8,6 +8,7 @@ interface AuthContextType {
   user: UserProfile | null;
   role: UserRole;
   isAuthenticated: boolean;
+  isLoaded: boolean;
   addresses: Address[];
   defaultAddress: Address | null;
   login: (email: string, password?: string) => Promise<{ success: boolean; message?: string; role?: UserRole }>;
@@ -38,20 +39,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (savedAuth) {
         const parsed = JSON.parse(savedAuth);
         setUser(parsed);
-        // Authoritative server-side sync for current approval status & profile changes
-        if (parsed.id) {
-          fetch(`/api/auth/me?userId=${encodeURIComponent(parsed.id)}`)
-            .then((r) => r.json())
-            .then((d) => {
-              if (d.success && d.user) {
-                setUser(d.user);
-                try {
-                  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(d.user));
-                } catch {}
-              }
-            })
-            .catch(() => {});
-        }
+        // Authoritative server-side sync for current session
+        fetch('/api/auth/me')
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.success && d.user) {
+              setUser(d.user);
+              try {
+                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(d.user));
+              } catch {}
+            } else {
+              setUser(null);
+              localStorage.removeItem(AUTH_STORAGE_KEY);
+            }
+          })
+          .catch(() => {});
       } else {
         setUser(null);
       }
@@ -196,11 +198,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const refreshProfile = async (targetUserId?: string): Promise<UserProfile | null> => {
-    const uid = targetUserId || user?.id;
-    if (!uid) return null;
+  const refreshProfile = async (_targetUserId?: string): Promise<UserProfile | null> => {
     try {
-      const res = await fetch(`/api/auth/me?userId=${encodeURIComponent(uid)}`);
+      const res = await fetch('/api/auth/me');
       const data = await res.json();
       if (data.success && data.user) {
         setUser(data.user);
@@ -208,6 +208,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(data.user));
         } catch {}
         return data.user;
+      } else {
+        setUser(null);
+        try {
+          localStorage.removeItem(AUTH_STORAGE_KEY);
+        } catch {}
       }
     } catch {
       // Ignore
@@ -215,8 +220,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
     setUser(null);
+    try {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+    } catch {}
   };
 
   // Arbitrary unauthenticated role switching is disabled per security specifications
@@ -261,6 +272,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         role: user?.role || 'customer',
         isAuthenticated: !!user,
+        isLoaded,
         addresses,
         defaultAddress,
         login,

@@ -1,15 +1,31 @@
 import { NextResponse } from 'next/server';
-import { dbService } from '@/lib/db';
+import { dbService, toDbId } from '@/lib/db';
+import { getSessionFromRequest } from '@/lib/session';
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const order = await dbService.getOrderById(id);
+  const session = await getSessionFromRequest(request);
 
+  if (!session) {
+    return NextResponse.json({ success: false, message: 'Authentication required. Please sign in.' }, { status: 401 });
+  }
+
+  const order = await dbService.getOrderById(id);
   if (!order) {
     return NextResponse.json({ success: false, message: 'Order not found' }, { status: 404 });
+  }
+
+  // Authoritative ownership verification
+  const isOwner = toDbId(order.user_id) === toDbId(session.userId);
+  const isSeller = order.fisherman_id ? toDbId(order.fisherman_id) === toDbId(session.userId) : false;
+  const isAssignedDelivery = order.assigned_delivery_partner?.id ? toDbId(order.assigned_delivery_partner.id) === toDbId(session.userId) : false;
+  const isAdmin = session.role === 'admin';
+
+  if (!isOwner && !isSeller && !isAssignedDelivery && !isAdmin) {
+    return NextResponse.json({ success: false, message: 'Access denied.' }, { status: 403 });
   }
 
   return NextResponse.json({ success: true, order });

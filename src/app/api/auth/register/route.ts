@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { dbService } from '@/lib/db';
+import { setSessionCookie } from '@/lib/session';
 
 export async function POST(request: Request) {
   try {
@@ -36,11 +37,19 @@ export async function POST(request: Request) {
 
     const { password_hash, ...safeUser } = regResult.user;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: safeUser,
       message: 'Account created successfully! Welcome to Fish Basket.',
     });
+
+    setSessionCookie(response, {
+      userId: safeUser.id,
+      email: safeUser.email,
+      role: safeUser.role as any,
+    });
+
+    return response;
   } catch (err: any) {
     return NextResponse.json(
       { success: false, message: err.message || 'Internal registration error.' },
