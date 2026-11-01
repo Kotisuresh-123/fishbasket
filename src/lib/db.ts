@@ -1816,86 +1816,7 @@ export const dbService = {
           } as any;
         }
 
-        // 2. Debit 25% advance from customer wallet
-        const custBalAfterAdvance = Math.round((custWallet.balance - advanceAmount) * 100) / 100;
-        await client.query(
-          `UPDATE wallets SET balance = $1, updated_at = now() WHERE id = $2`,
-          [custBalAfterAdvance, custWallet.id]
-        );
-        await client.query(
-          `INSERT INTO wallet_transactions (
-            wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
-            reference_id, description, metadata
-          ) VALUES ($1, $2, $3, 'advance_debit', $4, 'debit', 'completed', $5, $6, $7, $8)`,
-          [
-            custWallet.id,
-            dbUserId,
-            newId,
-            advanceAmount,
-            custBalAfterAdvance,
-            order_number,
-            `25% advance payment for fresh catch order ${order_number}`,
-            JSON.stringify({ order_number, subtotal: orderData.subtotal }),
-          ]
-        );
-
-        // 3. If full wallet payment chosen, debit remaining 75%
-        let finalCustBal = custBalAfterAdvance;
-        if (isFullWalletPayment && remainingAmount > 0) {
-          finalCustBal = Math.round((custBalAfterAdvance - remainingAmount) * 100) / 100;
-          await client.query(
-            `UPDATE wallets SET balance = $1, updated_at = now() WHERE id = $2`,
-            [finalCustBal, custWallet.id]
-          );
-          await client.query(
-            `INSERT INTO wallet_transactions (
-              wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
-              reference_id, description, metadata
-            ) VALUES ($1, $2, $3, 'remaining_payment', $4, 'debit', 'completed', $5, $6, $7, $8)`,
-            [
-              custWallet.id,
-              dbUserId,
-              newId,
-              remainingAmount,
-              finalCustBal,
-              order_number,
-              `Remaining 75% payment for fresh catch order ${order_number}`,
-              JSON.stringify({ order_number, remaining_amount: remainingAmount }),
-            ]
-          );
-        }
-
-        // 4. Credit fisherman pending advance (escrow until acceptance)
-        if (dbFishermanId) {
-          const fWalRes = await client.query(
-            `INSERT INTO wallets (user_id, role, balance, pending_balance, currency)
-             VALUES ($1, 'fisherman', 0.00, $2, 'INR')
-             ON CONFLICT (user_id) DO UPDATE SET
-               pending_balance = wallets.pending_balance + $2,
-               updated_at = now()
-             RETURNING id, pending_balance::float`,
-            [dbFishermanId, advanceAmount]
-          );
-          const fWal = fWalRes.rows[0];
-          await client.query(
-            `INSERT INTO wallet_transactions (
-              wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
-              reference_id, description, metadata
-            ) VALUES ($1, $2, $3, 'advance_reserve', $4, 'credit', 'pending', $5, $6, $7, $8)`,
-            [
-              fWal.id,
-              dbFishermanId,
-              newId,
-              advanceAmount,
-              fWal.pending_balance,
-              order_number,
-              `Pending 25% advance for order ${order_number} (holds until order acceptance)`,
-              JSON.stringify({ order_number }),
-            ]
-          );
-        }
-
-        // 5. Insert order
+        // 2. Insert order FIRST so that the order record exists before any child order items or wallet ledger entries reference it
         await client.query(
           `INSERT INTO orders (
             id, order_number, user_id, fisherman_id, seller_name, status,
@@ -1940,6 +1861,7 @@ export const dbService = {
           ]
         );
 
+        // 3. Insert order items & deduct product inventory
         for (const item of orderData.items) {
           const prodDbId = toDbId(item.product_id);
           await client.query(
@@ -1968,6 +1890,92 @@ export const dbService = {
                  is_available = CASE WHEN stock_quantity - $1 <= 0 THEN FALSE ELSE is_available END
              WHERE id = $2 OR id::text = $3`,
             [item.quantity, prodDbId, item.product_id]
+          );
+        }
+
+        if (orderData.coupon_code) {
+          await client.query(`UPDATE coupons SET used_count = used_count + 1 WHERE code = $1`, [orderData.coupon_code]);
+        }
+
+        // 4. Debit 25% advance from customer wallet and record ledger transaction (order_id now safely exists in orders table)
+        const custBalAfterAdvance = Math.round((custWallet.balance - advanceAmount) * 100) / 100;
+        await client.query(
+          `UPDATE wallets SET balance = $1, updated_at = now() WHERE id = $2`,
+          [custBalAfterAdvance, custWallet.id]
+        );
+        await client.query(
+          `INSERT INTO wallet_transactions (
+            wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
+            reference_id, idempotency_key, description, metadata
+          ) VALUES ($1, $2, $3, 'advance_debit', $4, 'debit', 'completed', $5, $6, $7, $8, $9)`,
+          [
+            custWallet.id,
+            dbUserId,
+            newId,
+            advanceAmount,
+            custBalAfterAdvance,
+            order_number,
+            `adv_debit_${newId}`,
+            `25% advance payment for fresh catch order ${order_number}`,
+            JSON.stringify({ order_number, subtotal: orderData.subtotal }),
+          ]
+        );
+
+        // 5. If full wallet payment chosen, debit remaining 75%
+        let finalCustBal = custBalAfterAdvance;
+        if (isFullWalletPayment && remainingAmount > 0) {
+          finalCustBal = Math.round((custBalAfterAdvance - remainingAmount) * 100) / 100;
+          await client.query(
+            `UPDATE wallets SET balance = $1, updated_at = now() WHERE id = $2`,
+            [finalCustBal, custWallet.id]
+          );
+          await client.query(
+            `INSERT INTO wallet_transactions (
+              wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
+              reference_id, idempotency_key, description, metadata
+            ) VALUES ($1, $2, $3, 'remaining_payment', $4, 'debit', 'completed', $5, $6, $7, $8, $9)`,
+            [
+              custWallet.id,
+              dbUserId,
+              newId,
+              remainingAmount,
+              finalCustBal,
+              order_number,
+              `rem_pay_${newId}`,
+              `Remaining 75% payment for fresh catch order ${order_number}`,
+              JSON.stringify({ order_number, remaining_amount: remainingAmount }),
+            ]
+          );
+        }
+
+        // 6. Credit fisherman pending advance (escrow until acceptance)
+        if (dbFishermanId) {
+          const fWalRes = await client.query(
+            `INSERT INTO wallets (user_id, role, balance, pending_balance, currency)
+             VALUES ($1, 'fisherman', 0.00, $2, 'INR')
+             ON CONFLICT (user_id) DO UPDATE SET
+               pending_balance = wallets.pending_balance + $2,
+               updated_at = now()
+             RETURNING id, pending_balance::float`,
+            [dbFishermanId, advanceAmount]
+          );
+          const fWal = fWalRes.rows[0];
+          await client.query(
+            `INSERT INTO wallet_transactions (
+              wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
+              reference_id, idempotency_key, description, metadata
+            ) VALUES ($1, $2, $3, 'advance_reserve', $4, 'credit', 'pending', $5, $6, $7, $8, $9)`,
+            [
+              fWal.id,
+              dbFishermanId,
+              newId,
+              advanceAmount,
+              fWal.pending_balance,
+              order_number,
+              `adv_res_${newId}`,
+              `Pending 25% advance for order ${order_number} (holds until order acceptance)`,
+              JSON.stringify({ order_number }),
+            ]
           );
         }
 
@@ -2026,6 +2034,28 @@ export const dbService = {
         message: `Insufficient demo wallet balance. Required: ₹${reqWal}, Available: ₹${memCustWal.balance}. Please add demo funds to complete checkout.`,
       } as any;
     }
+
+    // 1. Create order record first in memory
+    const memOrder: Order = {
+      ...orderData,
+      id: newId,
+      order_number,
+      status: orderData.status || 'confirmed',
+      fisherman_id: expectedFishermanAppId,
+      payment_method: overallPaymentMethod,
+      payment_status: overallPaymentStatus,
+      advance_amount: advanceAmount,
+      advance_payment_status: 'paid',
+      remaining_amount: remainingAmount,
+      remaining_payment_method: remainingMethod,
+      remaining_payment_status: remainingStatus,
+      advance_released_to_fisherman: false,
+      created_at: now,
+      updated_at: now,
+    };
+    memDb.orders.unshift(memOrder);
+
+    // 2. Debit 25% advance from customer wallet and record ledger entry
     memCustWal.balance = Math.round((memCustWal.balance - reqWal) * 100) / 100;
     memDb.walletTransactions.push({
       id: 'tx_adv_' + Date.now(),
@@ -2038,10 +2068,12 @@ export const dbService = {
       status: 'completed',
       balance_after: memCustWal.balance,
       reference_id: order_number,
+      idempotency_key: `adv_debit_${newId}`,
       description: `25% advance payment for fresh catch order ${order_number}`,
       created_at: now,
     });
 
+    // 3. Credit fisherman pending advance
     if (expectedFishermanAppId) {
       let memFWal = memDb.wallets.find((w) => w.user_id === expectedFishermanAppId || w.user_id === dbFishermanId);
       if (!memFWal) {
@@ -2070,29 +2102,12 @@ export const dbService = {
         status: 'pending',
         balance_after: memFWal.pending_balance,
         reference_id: order_number,
+        idempotency_key: `adv_res_${newId}`,
         description: `Pending 25% advance for order ${order_number}`,
         created_at: now,
       });
     }
 
-    const memOrder: Order = {
-      ...orderData,
-      id: newId,
-      order_number,
-      status: orderData.status || 'confirmed',
-      fisherman_id: expectedFishermanAppId,
-      payment_method: overallPaymentMethod,
-      payment_status: overallPaymentStatus,
-      advance_amount: advanceAmount,
-      advance_payment_status: 'paid',
-      remaining_amount: remainingAmount,
-      remaining_payment_method: remainingMethod,
-      remaining_payment_status: remainingStatus,
-      advance_released_to_fisherman: false,
-      created_at: now,
-      updated_at: now,
-    };
-    memDb.orders.unshift(memOrder);
     return { success: true, order: memOrder };
   },
 
@@ -3434,6 +3449,7 @@ export const dbService = {
           status: 'completed',
           balance_after: cWal.balance,
           reference_id: memOrd.order_number,
+          idempotency_key: `adv_ref_${memOrd.id}`,
           description: `Refund of 25% advance for order (${memOrd.order_number})`,
           created_at: new Date().toISOString(),
         });

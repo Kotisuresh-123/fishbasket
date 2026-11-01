@@ -127,6 +127,7 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    if (isSubmitting) return;
     if (!isPincodeServiceable) {
       setOrderError('Selected PIN code is outside our serviceable cold-chain delivery zone.');
       return;

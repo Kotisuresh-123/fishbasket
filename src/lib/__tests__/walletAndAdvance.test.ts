@@ -352,6 +352,85 @@ describe('Virtual Demo Wallet, Advance Payment, Escrow Release & Refunds', () =>
     expect(updatedOrder?.payment_status).toBe('success');
   });
 
+  it('correctly creates order and sets order_id on wallet_transactions for ₹3,500 subtotal (₹875 advance, ₹2,625 COD)', async () => {
+    // Set customer balance to exactly ₹1,500 as in the production issue
+    const custWal = await dbService.getWallet(testCustomerId);
+    if (custWal) {
+      custWal.balance = 1500;
+    }
+
+    const orderData = {
+      user_id: testCustomerId,
+      customer_name: 'Production Customer',
+      customer_phone: '9876543210',
+      customer_email: 'prod@fishbasket.in',
+      subtotal: 3500, // 25% advance = ₹875
+      cleaning_fee_total: 0,
+      delivery_fee: 0,
+      discount_amount: 0,
+      tax_amount: 0,
+      total_amount: 3500,
+      status: 'confirmed' as const,
+      payment_status: 'pending' as const,
+      payment_method: 'wallet_advance_cod' as const,
+      remaining_payment_method: 'cod' as const,
+      fisherman_id: testFishermanId,
+      seller_name: 'Captain Govind',
+      delivery_address: dummyAddress,
+      delivery_slot: dummySlot,
+      items: [
+        {
+          product_id: 'p1',
+          fisherman_id: testFishermanId,
+          product_name: 'Silver Pomfret',
+          product_image: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5',
+          cleaning_fee: 0,
+          unit_price: 1750,
+          quantity: 2,
+          item_total: 3500,
+        },
+      ],
+    };
+
+    const orderRes = await dbService.createOrder(orderData);
+    expect(orderRes.success).toBe(true);
+    const order = orderRes.order!;
+    expect(order.id).toBeDefined();
+    expect(order.advance_amount).toBe(875);
+    expect(order.remaining_amount).toBe(2625);
+    expect(order.remaining_payment_method).toBe('cod');
+    expect(order.remaining_payment_status).toBe('pending');
+    expect(order.advance_payment_status).toBe('paid');
+    expect(order.advance_released_to_fisherman).toBe(false);
+
+    // Verify customer wallet balance after debit: ₹1,500 - ₹875 = ₹625
+    const updatedCustWal = await dbService.getWallet(testCustomerId);
+    expect(updatedCustWal?.balance).toBe(625);
+
+    // Verify wallet_transactions references the persisted order.id
+    const txs = await dbService.getWalletTransactions(testCustomerId);
+    const debitTx = txs.find((t) => t.order_id === order.id && t.transaction_type === 'advance_debit');
+    expect(debitTx).toBeDefined();
+    expect(debitTx?.amount).toBe(875);
+    expect(debitTx?.order_id).toBe(order.id);
+    expect(debitTx?.direction).toBe('debit');
+    expect(debitTx?.status).toBe('completed');
+    expect(debitTx?.idempotency_key).toBe(`adv_debit_${order.id}`);
+
+    // Verify fisherman receives ₹875 in pending balance (escrow until acceptance)
+    const fWal = await dbService.getWallet(testFishermanId);
+    expect(fWal?.pending_balance).toBe(875);
+    expect(fWal?.balance).toBe(0);
+
+    const fTxs = await dbService.getWalletTransactions(testFishermanId);
+    const reserveTx = fTxs.find((t) => t.order_id === order.id && t.transaction_type === 'advance_reserve');
+    expect(reserveTx).toBeDefined();
+    expect(reserveTx?.amount).toBe(875);
+    expect(reserveTx?.order_id).toBe(order.id);
+    expect(reserveTx?.status).toBe('pending');
+    expect(reserveTx?.idempotency_key).toBe(`adv_res_${order.id}`);
+  });
+
   describe('Fisherman Catch Photo Validation & Security', () => {
     it('validates allowed image formats (JPEG, PNG, WebP) and size limit (<= 5MB)', () => {
       const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
