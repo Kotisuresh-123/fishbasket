@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Category, SeafoodFreshness } from '@/types';
 import { formatINR } from '@/lib/cartUtils';
+import CatchImage from '@/components/CatchImage';
+import CatchImageUploader from '@/components/CatchImageUploader';
 import {
   ArrowLeft,
   ArrowRight,
@@ -474,31 +476,10 @@ export default function NewFishermanProductPage() {
               <span>Step 3: Catch Photo & Preparation Cuts</span>
             </h3>
 
-            <div>
-              <label className="block text-xs font-bold text-[var(--text-primary)] mb-1">
-                Product Image URL <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="url"
-                required
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://images.unsplash.com/..."
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] placeholder-[var(--text-secondary)] focus:outline-none focus:border-[#00D2C4] font-medium"
-              />
-            </div>
-
-            {imageUrl && (
-              <div className="flex items-center gap-3 p-3 bg-[var(--surface-elevated)] rounded-2xl border border-[var(--border)]">
-                <div className="relative w-16 h-16 rounded-xl overflow-hidden bg-[var(--surface)] flex-shrink-0 border border-[var(--border)]">
-                  <Image src={imageUrl} alt="Catch preview" fill className="object-cover" />
-                </div>
-                <div className="text-xs">
-                  <span className="font-bold text-[var(--text-primary)] block">Photo Preview</span>
-                  <span className="text-[11px] text-[var(--text-secondary)]">Displayed on storefront cards</span>
-                </div>
-              </div>
-            )}
+            <CatchImageUploader
+              value={imageUrl}
+              onChange={(url) => setImageUrl(url)}
+            />
 
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -560,7 +541,7 @@ export default function NewFishermanProductPage() {
               <div className="flex items-start justify-between gap-3 pb-3 border-b border-[var(--border)]">
                 <div className="flex items-center gap-3">
                   <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-[var(--surface)] border border-[var(--border)] flex-shrink-0">
-                    <Image src={imageUrl} alt={name} fill className="object-cover" />
+                    <CatchImage src={imageUrl} alt={name} fill className="object-cover" />
                   </div>
                   <div>
                     <h4 className="font-bold text-sm text-[var(--text-primary)]">{name}</h4>

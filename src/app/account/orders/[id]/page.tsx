@@ -4,7 +4,8 @@ import { notFound, redirect } from 'next/navigation';
 import { dbService, toDbId } from '@/lib/db';
 import { formatINR } from '@/lib/cartUtils';
 import { getSessionFromRequest } from '@/lib/session';
-import { Package, Truck, ArrowLeft, Printer, MapPin, Clock } from 'lucide-react';
+import { Package, Truck, ArrowLeft, Printer, MapPin, Clock, Wallet } from 'lucide-react';
+import PayRemainingButton from '@/components/PayRemainingButton';
 
 interface OrderDetailPageProps {
   params: Promise<{
@@ -137,12 +138,40 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </div>
         </div>
 
-        {/* Price Breakdown */}
-        <div className="border-t border-[var(--border)] pt-4 space-y-2 max-w-xs ml-auto text-[var(--text-secondary)]">
+        {/* Advance & Payment Summary */}
+        <div className="border-t border-[var(--border)] pt-4 space-y-2 max-w-sm ml-auto text-[var(--text-secondary)] text-xs">
           <div className="flex justify-between">
-            <span>Item Subtotal:</span>
+            <span>Fish Subtotal:</span>
             <span className="font-semibold text-[var(--text-primary)]">{formatINR(order.subtotal)}</span>
           </div>
+          <div className="flex justify-between text-teal-700 dark:text-[#00D2C4] font-bold">
+            <span>25% Advance Paid (Demo Wallet):</span>
+            <span>{formatINR(order.advance_amount || Math.round(order.subtotal * 0.25 * 100) / 100)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Remaining Fish Balance:</span>
+            <span className="font-semibold text-[var(--text-primary)]">
+              {formatINR(order.remaining_amount || Math.round((order.total_amount - (order.advance_amount || 0)) * 100) / 100)}
+            </span>
+          </div>
+          <div className="flex justify-between text-[11px]">
+            <span>Remaining Payment Method:</span>
+            <span className="font-bold text-[var(--text-primary)] uppercase">
+              {order.remaining_payment_method === 'wallet' ? 'Virtual Wallet' : 'Cash on Delivery (COD)'}
+            </span>
+          </div>
+          <div className="flex justify-between text-[11px]">
+            <span>Remaining Status:</span>
+            <span className={`font-bold uppercase ${order.remaining_payment_status === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>
+              {order.remaining_payment_status === 'paid' ? 'Paid' : 'Pending at Delivery'}
+            </span>
+          </div>
+          {order.refund_status === 'refunded' && (
+            <div className="flex justify-between text-rose-600 font-bold">
+              <span>Refunded to Wallet:</span>
+              <span>{formatINR(order.refund_amount || 0)}</span>
+            </div>
+          )}
           {order.cleaning_fee_total > 0 && (
             <div className="flex justify-between">
               <span>Cleaning & Cut Charges:</span>
@@ -162,9 +191,21 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
             </div>
           )}
           <div className="flex justify-between text-sm font-black text-[var(--text-primary)] pt-2 border-t border-[var(--border)]">
-            <span>Paid Amount:</span>
+            <span>Total Order Value:</span>
             <span className="text-teal-700 dark:text-[#00D2C4] text-base">{formatINR(order.total_amount)}</span>
           </div>
+
+          {/* Pay Remaining Balance Option */}
+          {order.status !== 'cancelled' && (
+            <div className="pt-2">
+              <PayRemainingButton
+                orderId={order.id}
+                remainingAmount={order.remaining_amount || Math.round((order.total_amount - (order.advance_amount || 0)) * 100) / 100}
+                isPaid={order.remaining_payment_status === 'paid'}
+                orderStatus={order.status}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

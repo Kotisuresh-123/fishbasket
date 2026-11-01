@@ -6,12 +6,13 @@ import { useAuth } from '@/context/AuthContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { Order } from '@/types';
 import { formatINR } from '@/lib/cartUtils';
-import { Package, MapPin, Heart, ArrowRight, Truck, Clock } from 'lucide-react';
+import { Package, MapPin, Heart, ArrowRight, Truck, Clock, Wallet } from 'lucide-react';
 
 export default function AccountOverviewPage() {
   const { user, defaultAddress, isLoaded } = useAuth();
   const { wishlistCount } = useWishlist();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -26,6 +27,13 @@ export default function AccountOverviewPage() {
         if (data.success && Array.isArray(data.orders)) setOrders(data.orders);
       })
       .catch(() => {});
+
+    fetch('/api/wallet')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.wallet) setWalletBalance(data.wallet.balance);
+      })
+      .catch(() => {});
   }, [user?.id, isLoaded]);
 
   const latestOrder = orders[0];
@@ -33,7 +41,21 @@ export default function AccountOverviewPage() {
   return (
     <div className="space-y-6">
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] shadow-xs">
+          <div className="flex items-center justify-between text-[var(--text-secondary)] mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider">Demo Wallet</span>
+            <div className="w-8 h-8 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600 dark:text-[#00D2C4]">
+              <Wallet className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-2xl font-black text-teal-700 dark:text-[#00D2C4]">
+            {walletBalance !== null ? formatINR(walletBalance) : '...'}
+          </div>
+          <Link href="/account/wallet" className="text-[11px] text-teal-600 dark:text-[#00D2C4] font-semibold mt-1 inline-block hover:underline">
+            Manage & Top-up →
+          </Link>
+        </div>
         <div className="bg-[var(--surface)] p-5 rounded-2xl border border-[var(--border)] shadow-xs">
           <div className="flex items-center justify-between text-[var(--text-secondary)] mb-2">
             <span className="text-xs font-bold uppercase tracking-wider">Total Orders</span>

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { Product } from '@/types';
+import CatchImage from '@/components/CatchImage';
+import CatchImageUploader from '@/components/CatchImageUploader';
 import {
   Fish,
   ArrowLeft,
@@ -230,15 +232,9 @@ export default function EditFishermanProductPage() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-[var(--text-primary)] mb-1">
-                Seafood Image URL
-              </label>
-              <input
-                type="url"
-                required
+              <CatchImageUploader
                 value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs rounded-xl bg-[var(--surface-elevated)] border border-[var(--border)] text-[var(--text-primary)] focus:outline-none focus:border-[#00D2C4] font-medium"
+                onChange={(url) => setImageUrl(url)}
               />
             </div>
 

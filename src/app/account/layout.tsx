@@ -12,6 +12,7 @@ import {
   LogOut,
   ShieldCheck,
   ChevronRight,
+  Wallet,
 } from 'lucide-react';
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
@@ -20,6 +21,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
 
   const navItems = [
     { name: 'Dashboard Overview', href: '/account', icon: User },
+    { name: 'Demo Wallet', href: '/account/wallet', icon: Wallet },
     { name: 'My Orders', href: '/account/orders', icon: Package },
     { name: 'Saved Addresses', href: '/account/addresses', icon: MapPin },
     { name: 'Fresh Catch Wishlist', href: '/account/wishlist', icon: Heart },

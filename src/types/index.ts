@@ -189,8 +189,16 @@ export interface Order {
   cancelled_reason?: string;
   fisherman_id?: string;      // Identifies the single fisherman supplying this order
   seller_name?: string;       // Display name of the fisherman supplying this order
-  payment_method: 'razorpay' | 'cod';
+  payment_method: 'razorpay' | 'cod' | 'wallet' | 'wallet_advance_cod';
   payment_status: 'pending' | 'success' | 'failed' | 'refunded';
+  advance_amount?: number;
+  advance_payment_status?: 'unpaid' | 'paid' | 'refunded';
+  remaining_amount?: number;
+  remaining_payment_method?: 'cod' | 'wallet';
+  remaining_payment_status?: 'pending' | 'paid';
+  advance_released_to_fisherman?: boolean;
+  refund_amount?: number;
+  refund_status?: 'none' | 'refunded' | 'failed';
   payment_collected_at?: string;
   payment_collected_by?: string;
   razorpay_order_id?: string;
@@ -278,4 +286,47 @@ export interface CustomerSummary {
   last_order_date?: string;
   recent_orders?: CustomerOrderBrief[];
   orders: CustomerOrderBrief[];
+}
+
+export type WalletTransactionType =
+  | 'initial_credit'
+  | 'top_up'
+  | 'advance_debit'
+  | 'advance_reserve'
+  | 'advance_release'
+  | 'advance_refund'
+  | 'remaining_payment'
+  | 'cancellation_refund'
+  | 'delivery_fee_credit';
+
+export type WalletTransactionDirection = 'credit' | 'debit';
+export type WalletTransactionStatus = 'pending' | 'completed' | 'failed' | 'reversed';
+
+export interface Wallet {
+  id: string;
+  user_id: string;
+  role: UserRole;
+  balance: number;
+  pending_balance: number;
+  currency: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WalletTransaction {
+  id: string;
+  wallet_id: string;
+  user_id: string;
+  order_id?: string;
+  transaction_type: WalletTransactionType;
+  amount: number;
+  direction: WalletTransactionDirection;
+  status: WalletTransactionStatus;
+  balance_after: number;
+  reference_id?: string;
+  idempotency_key?: string;
+  description: string;
+  metadata?: Record<string, any>;
+  created_at: string;
 }

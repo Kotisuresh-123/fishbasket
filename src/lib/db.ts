@@ -23,6 +23,8 @@ import {
   FishermanStatus,
   FishermanStats,
   CustomerSummary,
+  Wallet,
+  WalletTransaction,
 } from '@/types';
 import {
   INITIAL_CATEGORIES,
@@ -52,6 +54,8 @@ declare global {
     reviews: ProductReview[];
     settings: StoreSettings;
     resetTokens: { [token: string]: { email: string; expiresAt: number } };
+    wallets: Wallet[];
+    walletTransactions: WalletTransaction[];
   } | undefined;
 }
 
@@ -199,10 +203,12 @@ if (!global.__fishbasket_db_fallback) {
     ],
     settings: JSON.parse(JSON.stringify(STORE_SETTINGS)),
     resetTokens: {},
+    wallets: [],
+    walletTransactions: [],
   };
 }
 
-const memDb = global.__fishbasket_db_fallback!;
+export const memDb = global.__fishbasket_db_fallback!;
 
 function warnFallback(tag: string, err: any) {
   if (isTestEnv || err?.message === 'TEST_ENV_MEM_FALLBACK') return;
@@ -1247,7 +1253,7 @@ export const dbService = {
         }
       }
 
-      if (!user) {
+      if (!user && !isTestEnv) {
         try {
           const { data: supaUser } = await supabase
             .from('profiles')
@@ -1559,6 +1565,14 @@ export const dbService = {
           o.coupon_code, o.payment_method, o.payment_status, o.payment_collected_at,
           o.payment_collected_by, o.delivery_address, o.delivery_slot,
           o.delivery_notes, o.cancelled_reason, o.assigned_delivery_partner,
+          COALESCE(o.advance_amount, 0.00)::float as advance_amount,
+          COALESCE(o.advance_payment_status, 'unpaid') as advance_payment_status,
+          COALESCE(o.remaining_amount, 0.00)::float as remaining_amount,
+          COALESCE(o.remaining_payment_method, 'cod') as remaining_payment_method,
+          COALESCE(o.remaining_payment_status, 'pending') as remaining_payment_status,
+          COALESCE(o.advance_released_to_fisherman, false) as advance_released_to_fisherman,
+          COALESCE(o.refund_amount, 0.00)::float as refund_amount,
+          COALESCE(o.refund_status, 'none') as refund_status,
           o.created_at, o.updated_at,
           COALESCE(p.full_name, o.delivery_address->>'recipient_name', 'Customer') as customer_name,
           COALESCE(p.phone, o.delivery_address->>'phone', '') as customer_phone,
@@ -1763,23 +1777,140 @@ export const dbService = {
     const order_number = `FB-${dateStr}-${randSuffix}`;
     const now = new Date().toISOString();
 
+    // Calculate 25% advance on eligible fish subtotal and remaining amount
+    const advanceAmount = Math.round(orderData.subtotal * 0.25 * 100) / 100;
+    const remainingAmount = Math.round((orderData.total_amount - advanceAmount) * 100) / 100;
+    const isFullWalletPayment = orderData.payment_method === 'wallet' || orderData.remaining_payment_method === 'wallet';
+    const remainingMethod = isFullWalletPayment ? 'wallet' : 'cod';
+    const remainingStatus = isFullWalletPayment ? 'paid' : 'pending';
+    const overallPaymentMethod = orderData.payment_method || (isFullWalletPayment ? 'wallet' : 'wallet_advance_cod');
+    const overallPaymentStatus = (overallPaymentMethod === 'wallet' || orderData.payment_status === 'success') ? 'success' : 'pending';
+
     const pool = getPgPool();
     if (pool && !isTestEnv) {
       const client = await pool.connect();
       try {
         await client.query('BEGIN');
 
+        // 1. Authoritative check & lock on customer wallet
+        const wRes = await client.query(
+          `SELECT id, balance::float, pending_balance::float FROM wallets WHERE user_id = $1 FOR UPDATE`,
+          [dbUserId]
+        );
+        let custWallet = wRes.rows[0];
+        if (!custWallet) {
+          custWallet = await this.getWallet(orderData.user_id);
+        }
+
+        const requiredTotalWallet = isFullWalletPayment ? orderData.total_amount : advanceAmount;
+        if (!custWallet || custWallet.balance < requiredTotalWallet) {
+          const avail = custWallet ? custWallet.balance : 0;
+          await client.query('ROLLBACK');
+          return {
+            success: false,
+            errorType: 'insufficient_advance_balance',
+            requiredAdvance: advanceAmount,
+            availableBalance: avail,
+            shortfall: Math.round((requiredTotalWallet - avail) * 100) / 100,
+            message: `Insufficient demo wallet balance. Required: ₹${requiredTotalWallet}, Available: ₹${avail}. Please add demo funds to complete checkout.`,
+          } as any;
+        }
+
+        // 2. Debit 25% advance from customer wallet
+        const custBalAfterAdvance = Math.round((custWallet.balance - advanceAmount) * 100) / 100;
+        await client.query(
+          `UPDATE wallets SET balance = $1, updated_at = now() WHERE id = $2`,
+          [custBalAfterAdvance, custWallet.id]
+        );
+        await client.query(
+          `INSERT INTO wallet_transactions (
+            wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
+            reference_id, description, metadata
+          ) VALUES ($1, $2, $3, 'advance_debit', $4, 'debit', 'completed', $5, $6, $7, $8)`,
+          [
+            custWallet.id,
+            dbUserId,
+            newId,
+            advanceAmount,
+            custBalAfterAdvance,
+            order_number,
+            `25% advance payment for fresh catch order ${order_number}`,
+            JSON.stringify({ order_number, subtotal: orderData.subtotal }),
+          ]
+        );
+
+        // 3. If full wallet payment chosen, debit remaining 75%
+        let finalCustBal = custBalAfterAdvance;
+        if (isFullWalletPayment && remainingAmount > 0) {
+          finalCustBal = Math.round((custBalAfterAdvance - remainingAmount) * 100) / 100;
+          await client.query(
+            `UPDATE wallets SET balance = $1, updated_at = now() WHERE id = $2`,
+            [finalCustBal, custWallet.id]
+          );
+          await client.query(
+            `INSERT INTO wallet_transactions (
+              wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
+              reference_id, description, metadata
+            ) VALUES ($1, $2, $3, 'remaining_payment', $4, 'debit', 'completed', $5, $6, $7, $8)`,
+            [
+              custWallet.id,
+              dbUserId,
+              newId,
+              remainingAmount,
+              finalCustBal,
+              order_number,
+              `Remaining 75% payment for fresh catch order ${order_number}`,
+              JSON.stringify({ order_number, remaining_amount: remainingAmount }),
+            ]
+          );
+        }
+
+        // 4. Credit fisherman pending advance (escrow until acceptance)
+        if (dbFishermanId) {
+          const fWalRes = await client.query(
+            `INSERT INTO wallets (user_id, role, balance, pending_balance, currency)
+             VALUES ($1, 'fisherman', 0.00, $2, 'INR')
+             ON CONFLICT (user_id) DO UPDATE SET
+               pending_balance = wallets.pending_balance + $2,
+               updated_at = now()
+             RETURNING id, pending_balance::float`,
+            [dbFishermanId, advanceAmount]
+          );
+          const fWal = fWalRes.rows[0];
+          await client.query(
+            `INSERT INTO wallet_transactions (
+              wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
+              reference_id, description, metadata
+            ) VALUES ($1, $2, $3, 'advance_reserve', $4, 'credit', 'pending', $5, $6, $7, $8)`,
+            [
+              fWal.id,
+              dbFishermanId,
+              newId,
+              advanceAmount,
+              fWal.pending_balance,
+              order_number,
+              `Pending 25% advance for order ${order_number} (holds until order acceptance)`,
+              JSON.stringify({ order_number }),
+            ]
+          );
+        }
+
+        // 5. Insert order
         await client.query(
           `INSERT INTO orders (
             id, order_number, user_id, fisherman_id, seller_name, status,
             subtotal, cleaning_fee_total, delivery_fee, discount_amount, tax_amount, total_amount,
-            coupon_code, payment_method, payment_status, delivery_address, delivery_slot,
-            delivery_notes, created_at, updated_at
+            coupon_code, payment_method, payment_status,
+            advance_amount, advance_payment_status, remaining_amount, remaining_payment_method, remaining_payment_status,
+            advance_released_to_fisherman,
+            delivery_address, delivery_slot, delivery_notes, created_at, updated_at
           ) VALUES (
             $1, $2, $3, $4, $5, $6,
             $7, $8, $9, $10, $11, $12,
-            $13, $14, $15, $16, $17,
-            $18, NOW(), NOW()
+            $13, $14, $15,
+            $16, $17, $18, $19, $20,
+            $21,
+            $22, $23, $24, NOW(), NOW()
           )`,
           [
             newId,
@@ -1795,8 +1926,14 @@ export const dbService = {
             orderData.tax_amount || 0,
             orderData.total_amount,
             orderData.coupon_code || null,
-            'cod',
-            'pending',
+            overallPaymentMethod,
+            overallPaymentStatus,
+            advanceAmount,
+            'paid',
+            remainingAmount,
+            remainingMethod,
+            remainingStatus,
+            false,
             JSON.stringify(orderData.delivery_address),
             JSON.stringify(orderData.delivery_slot),
             orderData.delivery_notes || null,
@@ -1863,14 +2000,95 @@ export const dbService = {
       }
     }
 
+    let memCustWal = memDb.wallets.find((w) => w.user_id === orderData.user_id || w.user_id === dbUserId);
+    if (!memCustWal) {
+      memCustWal = {
+        id: 'w_' + Date.now(),
+        user_id: orderData.user_id,
+        role: 'customer',
+        balance: 1000,
+        pending_balance: 0,
+        currency: 'INR',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+      };
+      memDb.wallets.push(memCustWal);
+    }
+    const reqWal = isFullWalletPayment ? orderData.total_amount : advanceAmount;
+    if (memCustWal.balance < reqWal) {
+      return {
+        success: false,
+        errorType: 'insufficient_advance_balance',
+        requiredAdvance: advanceAmount,
+        availableBalance: memCustWal.balance,
+        shortfall: Math.round((reqWal - memCustWal.balance) * 100) / 100,
+        message: `Insufficient demo wallet balance. Required: ₹${reqWal}, Available: ₹${memCustWal.balance}. Please add demo funds to complete checkout.`,
+      } as any;
+    }
+    memCustWal.balance = Math.round((memCustWal.balance - reqWal) * 100) / 100;
+    memDb.walletTransactions.push({
+      id: 'tx_adv_' + Date.now(),
+      wallet_id: memCustWal.id,
+      user_id: orderData.user_id,
+      order_id: newId,
+      transaction_type: 'advance_debit',
+      amount: advanceAmount,
+      direction: 'debit',
+      status: 'completed',
+      balance_after: memCustWal.balance,
+      reference_id: order_number,
+      description: `25% advance payment for fresh catch order ${order_number}`,
+      created_at: now,
+    });
+
+    if (expectedFishermanAppId) {
+      let memFWal = memDb.wallets.find((w) => w.user_id === expectedFishermanAppId || w.user_id === dbFishermanId);
+      if (!memFWal) {
+        memFWal = {
+          id: 'w_f_' + Date.now(),
+          user_id: expectedFishermanAppId,
+          role: 'fisherman',
+          balance: 0,
+          pending_balance: 0,
+          currency: 'INR',
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        };
+        memDb.wallets.push(memFWal);
+      }
+      memFWal.pending_balance = Math.round((memFWal.pending_balance + advanceAmount) * 100) / 100;
+      memDb.walletTransactions.push({
+        id: 'tx_f_' + Date.now(),
+        wallet_id: memFWal.id,
+        user_id: expectedFishermanAppId,
+        order_id: newId,
+        transaction_type: 'advance_reserve',
+        amount: advanceAmount,
+        direction: 'credit',
+        status: 'pending',
+        balance_after: memFWal.pending_balance,
+        reference_id: order_number,
+        description: `Pending 25% advance for order ${order_number}`,
+        created_at: now,
+      });
+    }
+
     const memOrder: Order = {
       ...orderData,
       id: newId,
       order_number,
       status: orderData.status || 'confirmed',
       fisherman_id: expectedFishermanAppId,
-      payment_method: 'cod',
-      payment_status: 'pending',
+      payment_method: overallPaymentMethod,
+      payment_status: overallPaymentStatus,
+      advance_amount: advanceAmount,
+      advance_payment_status: 'paid',
+      remaining_amount: remainingAmount,
+      remaining_payment_method: remainingMethod,
+      remaining_payment_status: remainingStatus,
+      advance_released_to_fisherman: false,
       created_at: now,
       updated_at: now,
     };
@@ -2025,6 +2243,14 @@ export const dbService = {
         `UPDATE orders SET status = $1, delivery_notes = COALESCE(delivery_notes || ' | ' || $2, $2, delivery_notes), updated_at = NOW() WHERE id = $3 OR id::text = $4`,
         [status, notes || null, dbId, id]
       );
+
+      // Automated escrow advance handling based on status transition
+      if (status === 'accepted_for_prep' || status === 'preparing') {
+        await this.releaseAdvanceToFisherman(id, order.fisherman_id);
+      } else if (status === 'cancelled') {
+        await this.refundAdvanceToCustomer(id, notes || 'Order cancelled');
+      }
+
       const updated = await this.getOrderById(id);
       return { success: true, order: updated || undefined };
     } catch (err) {
@@ -2033,7 +2259,15 @@ export const dbService = {
 
     order.status = status;
     order.updated_at = new Date().toISOString();
-    return { success: true, order: { ...order } };
+
+    if (status === 'accepted_for_prep' || status === 'preparing') {
+      await this.releaseAdvanceToFisherman(id, order.fisherman_id);
+    } else if (status === 'cancelled') {
+      await this.refundAdvanceToCustomer(id, notes || 'Order cancelled');
+    }
+
+    const finalOrder = memDb.orders.find((o) => o.id === id || o.id === dbId) || order;
+    return { success: true, order: { ...finalOrder } };
   },
 
   async markCodPaymentCollected(
@@ -2420,22 +2654,24 @@ export const dbService = {
     }
 
     // Secondary resilient fallback: query Supabase REST client
-    try {
-      const { data: supaProfiles } = await supabase
-        .from('profiles')
-        .select('id, auth_id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at')
-        .or(`id.eq.${dbId},auth_id.eq.${dbId},id.eq.${id},auth_id.eq.${id}`)
-        .limit(1);
+    if (!isTestEnv) {
+      try {
+        const { data: supaProfiles } = await supabase
+          .from('profiles')
+          .select('id, auth_id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at')
+          .or(`id.eq.${dbId},auth_id.eq.${dbId},id.eq.${id},auth_id.eq.${id}`)
+          .limit(1);
 
-      if (supaProfiles && supaProfiles.length > 0) {
-        const sp = supaProfiles[0];
-        return {
-          ...sp,
-          id: toAppId(sp.id),
-          created_at: new Date(sp.created_at).toISOString(),
-        };
-      }
-    } catch {}
+        if (supaProfiles && supaProfiles.length > 0) {
+          const sp = supaProfiles[0];
+          return {
+            ...sp,
+            id: toAppId(sp.id),
+            created_at: new Date(sp.created_at).toISOString(),
+          };
+        }
+      } catch {}
+    }
 
     const p = memDb.profiles.find((user) => user.id === id || user.id === dbId || toAppId(user.id) === id);
     return p ? { ...p, id: toAppId(p.id) } : null;
@@ -2460,22 +2696,24 @@ export const dbService = {
       warnFallback('Database getProfileByEmail fallback:', err);
     }
 
-    try {
-      const { data: supaProfiles } = await supabase
-        .from('profiles')
-        .select('id, auth_id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at')
-        .eq('email', cleanEmail)
-        .limit(1);
+    if (!isTestEnv) {
+      try {
+        const { data: supaProfiles } = await supabase
+          .from('profiles')
+          .select('id, auth_id, email, full_name, phone, role, status, display_name, dock_location, avatar_url, created_at')
+          .eq('email', cleanEmail)
+          .limit(1);
 
-      if (supaProfiles && supaProfiles.length > 0) {
-        const sp = supaProfiles[0];
-        return {
-          ...sp,
-          id: toAppId(sp.id),
-          created_at: new Date(sp.created_at).toISOString(),
-        };
-      }
-    } catch {}
+        if (supaProfiles && supaProfiles.length > 0) {
+          const sp = supaProfiles[0];
+          return {
+            ...sp,
+            id: toAppId(sp.id),
+            created_at: new Date(sp.created_at).toISOString(),
+          };
+        }
+      } catch {}
+    }
 
     const p = memDb.profiles.find((user) => user.email.toLowerCase() === cleanEmail);
     return p ? { ...p, id: toAppId(p.id) } : null;
@@ -2710,5 +2948,671 @@ export const dbService = {
     }
     memDb.settings = { ...memDb.settings, ...updates };
     return { ...memDb.settings };
+  },
+
+  // ====================================================================
+  // VIRTUAL WALLET & MARKETPLACE ACCOUNTING SYSTEM (DEMO FINANCIAL SIMULATION)
+  // ====================================================================
+
+  async getWallet(userId: string): Promise<Wallet | null> {
+    const dbUserId = toDbId(userId);
+    try {
+      const pool = getPgPool();
+      if (!isTestEnv && pool) {
+        // Query existing wallet
+        const rows = await queryDb(
+          `SELECT id, user_id, role, balance::float, pending_balance::float, currency, is_active, created_at, updated_at
+           FROM wallets WHERE user_id = $1 OR user_id::text = $2 LIMIT 1`,
+          [dbUserId, userId]
+        );
+        if (rows.length > 0) return rows[0];
+
+        // If absent, look up profile to create wallet with initial grant
+        const profRows = await queryDb(
+          `SELECT id, role FROM profiles WHERE id = $1 OR id::text = $2 LIMIT 1`,
+          [dbUserId, userId]
+        );
+        if (profRows.length > 0) {
+          const profile = profRows[0];
+          const isCustomer = profile.role === 'customer';
+          const initialBalance = isCustomer ? 1000.00 : 0.00;
+
+          const client = await pool.connect();
+          try {
+            await client.query('BEGIN');
+            const insRes = await client.query(
+              `INSERT INTO wallets (user_id, role, balance, pending_balance, currency, is_active)
+               VALUES ($1, $2, $3, 0.00, 'INR', true)
+               ON CONFLICT (user_id) DO UPDATE SET updated_at = now()
+               RETURNING id, user_id, role, balance::float, pending_balance::float, currency, is_active, created_at, updated_at`,
+              [profile.id, profile.role, initialBalance]
+            );
+            const newWallet = insRes.rows[0];
+
+            if (isCustomer && initialBalance > 0) {
+              const idempotencyKey = `initial_credit_${profile.id}`;
+              await client.query(
+                `INSERT INTO wallet_transactions (
+                  wallet_id, user_id, transaction_type, amount, direction, status, balance_after,
+                  reference_id, idempotency_key, description, metadata
+                ) VALUES ($1, $2, 'initial_credit', $3, 'credit', 'completed', $3, 'WELCOME_GRANT', $4, 'Welcome demo wallet starting credit', $5)
+                ON CONFLICT (idempotency_key) DO NOTHING`,
+                [newWallet.id, profile.id, initialBalance, idempotencyKey, JSON.stringify({ reason: 'new_customer_welcome' })]
+              );
+            }
+            await client.query('COMMIT');
+            return newWallet;
+          } catch (e: any) {
+            await client.query('ROLLBACK');
+            warnFallback('Wallet creation error:', e);
+          } finally {
+            client.release();
+          }
+        }
+      }
+    } catch (err: any) {
+      warnFallback('Database getWallet fallback to memory:', err);
+    }
+
+    // Memory DB fallback for test environment
+    let wallet = memDb.wallets.find((w) => w.user_id === userId || w.user_id === dbUserId);
+    if (!wallet) {
+      const prof = memDb.profiles.find((p) => p.id === userId || p.id === dbUserId);
+      const isCustomer = prof ? prof.role === 'customer' : true;
+      const initialBalance = isCustomer ? 1000 : 0;
+      wallet = {
+        id: 'w_' + Date.now(),
+        user_id: userId,
+        role: (prof?.role || 'customer') as UserRole,
+        balance: initialBalance,
+        pending_balance: 0,
+        currency: 'INR',
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      memDb.wallets.push(wallet);
+      if (initialBalance > 0) {
+        memDb.walletTransactions.push({
+          id: 'tx_' + Date.now(),
+          wallet_id: wallet.id,
+          user_id: userId,
+          transaction_type: 'initial_credit',
+          amount: initialBalance,
+          direction: 'credit',
+          status: 'completed',
+          balance_after: initialBalance,
+          reference_id: 'WELCOME_GRANT',
+          idempotency_key: `initial_credit_${userId}`,
+          description: 'Welcome demo wallet starting credit',
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+    return wallet;
+  },
+
+  async getWalletTransactions(userId: string, limit: number = 50): Promise<WalletTransaction[]> {
+    const dbUserId = toDbId(userId);
+    try {
+      const rows = await queryDb(
+        `SELECT id, wallet_id, user_id, order_id, transaction_type, amount::float, direction,
+                status, balance_after::float, reference_id, idempotency_key, description, metadata, created_at
+         FROM wallet_transactions
+         WHERE user_id = $1 OR user_id::text = $2
+         ORDER BY created_at DESC
+         LIMIT $3`,
+        [dbUserId, userId, limit]
+      );
+      if (rows.length > 0) return rows;
+    } catch (err: any) {
+      warnFallback('Database getWalletTransactions fallback:', err);
+    }
+    return memDb.walletTransactions
+      .filter((tx) => tx.user_id === userId || tx.user_id === dbUserId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, limit);
+  },
+
+  async topUpWallet(
+    userId: string,
+    amount: number,
+    idempotencyKey?: string
+  ): Promise<{ success: boolean; wallet?: Wallet; transaction?: WalletTransaction; message?: string }> {
+    if (!amount || isNaN(amount) || amount <= 0 || !isFinite(amount)) {
+      return { success: false, message: 'Invalid top-up amount. Please enter a positive value.' };
+    }
+    if (amount < 100 || amount > 10000) {
+      return { success: false, message: 'Top-up amount must be between ₹100 and ₹10,000.' };
+    }
+
+    const cleanAmount = Math.round(amount * 100) / 100;
+    const dbUserId = toDbId(userId);
+    const key = idempotencyKey || `topup_${userId}_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+
+    try {
+      const pool = getPgPool();
+      if (!isTestEnv && pool) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+
+          // Idempotency check: return existing transaction if already processed
+          if (idempotencyKey) {
+            const existingTx = await client.query(
+              `SELECT id, wallet_id, user_id, order_id, transaction_type, amount::float, direction,
+                      status, balance_after::float, reference_id, idempotency_key, description, created_at
+               FROM wallet_transactions WHERE idempotency_key = $1`,
+              [idempotencyKey]
+            );
+            if (existingTx.rows.length > 0) {
+              const currentWallet = await client.query(
+                `SELECT id, user_id, role, balance::float, pending_balance::float, currency, is_active, created_at, updated_at
+                 FROM wallets WHERE id = $1`,
+                [existingTx.rows[0].wallet_id]
+              );
+              await client.query('COMMIT');
+              return { success: true, wallet: currentWallet.rows[0], transaction: existingTx.rows[0], message: 'Top-up already processed.' };
+            }
+          }
+
+          // Lock wallet row
+          const wRes = await client.query(
+            `SELECT id, user_id, role, balance::float, pending_balance::float, currency, is_active
+             FROM wallets WHERE user_id = $1 OR user_id::text = $2 FOR UPDATE`,
+            [dbUserId, userId]
+          );
+
+          let walletRow = wRes.rows[0];
+          if (!walletRow) {
+            walletRow = await this.getWallet(userId);
+            if (!walletRow) {
+              await client.query('ROLLBACK');
+              return { success: false, message: 'Wallet not found.' };
+            }
+          }
+
+          const newBalance = Math.round((walletRow.balance + cleanAmount) * 100) / 100;
+
+          // Update balance
+          const updRes = await client.query(
+            `UPDATE wallets SET balance = $1, updated_at = now() WHERE id = $2
+             RETURNING id, user_id, role, balance::float, pending_balance::float, currency, is_active, created_at, updated_at`,
+            [newBalance, walletRow.id]
+          );
+          const updatedWallet = updRes.rows[0];
+
+          // Insert ledger entry
+          const txRes = await client.query(
+            `INSERT INTO wallet_transactions (
+              wallet_id, user_id, transaction_type, amount, direction, status, balance_after,
+              reference_id, idempotency_key, description, metadata
+            ) VALUES ($1, $2, 'top_up', $3, 'credit', 'completed', $4, $5, $6, $7, $8)
+            RETURNING id, wallet_id, user_id, order_id, transaction_type, amount::float, direction,
+                      status, balance_after::float, reference_id, idempotency_key, description, created_at`,
+            [
+              updatedWallet.id,
+              dbUserId,
+              cleanAmount,
+              newBalance,
+              'SIMULATED_TOPUP',
+              key,
+              `Simulated demo wallet top-up (+₹${cleanAmount})`,
+              JSON.stringify({ simulated: true }),
+            ]
+          );
+
+          await client.query('COMMIT');
+          return { success: true, wallet: updatedWallet, transaction: txRes.rows[0], message: `Successfully added ₹${cleanAmount} demo credits!` };
+        } catch (e: any) {
+          await client.query('ROLLBACK');
+          warnFallback('Database topUpWallet error:', e);
+          return { success: false, message: e.message || 'Failed to process top-up in database.' };
+        } finally {
+          client.release();
+        }
+      }
+    } catch (err: any) {
+      warnFallback('Database topUpWallet fallback to memory:', err);
+    }
+
+    // Memory fallback for tests
+    const wallet = await this.getWallet(userId);
+    if (!wallet) return { success: false, message: 'Wallet not found.' };
+
+    const newBalance = Math.round((wallet.balance + cleanAmount) * 100) / 100;
+    wallet.balance = newBalance;
+    wallet.updated_at = new Date().toISOString();
+
+    const tx: WalletTransaction = {
+      id: 'tx_' + Date.now(),
+      wallet_id: wallet.id,
+      user_id: userId,
+      transaction_type: 'top_up',
+      amount: cleanAmount,
+      direction: 'credit',
+      status: 'completed',
+      balance_after: newBalance,
+      reference_id: 'SIMULATED_TOPUP',
+      idempotency_key: key,
+      description: `Simulated demo wallet top-up (+₹${cleanAmount})`,
+      created_at: new Date().toISOString(),
+    };
+    memDb.walletTransactions.push(tx);
+
+    return { success: true, wallet, transaction: tx, message: `Successfully added ₹${cleanAmount} demo credits!` };
+  },
+
+  async releaseAdvanceToFisherman(orderId: string, fishermanUserId?: string): Promise<{ success: boolean; message?: string }> {
+    const dbOrderId = toDbId(orderId);
+    try {
+      const pool = getPgPool();
+      if (!isTestEnv && pool) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const ordRes = await client.query(
+            `SELECT id, order_number, fisherman_id, advance_amount::float, advance_payment_status, advance_released_to_fisherman
+             FROM orders WHERE id = $1 OR id::text = $2 FOR UPDATE`,
+            [dbOrderId, orderId]
+          );
+          if (ordRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return { success: false, message: 'Order not found.' };
+          }
+          const ord = ordRes.rows[0];
+          if (!ord.advance_amount || ord.advance_amount <= 0 || ord.advance_payment_status !== 'paid') {
+            await client.query('COMMIT');
+            return { success: true, message: 'No paid advance on this order.' };
+          }
+          if (ord.advance_released_to_fisherman) {
+            await client.query('COMMIT');
+            return { success: true, message: 'Advance already released.' };
+          }
+
+          const targetFishermanId = ord.fisherman_id || (fishermanUserId ? toDbId(fishermanUserId) : null);
+          if (!targetFishermanId) {
+            await client.query('ROLLBACK');
+            return { success: false, message: 'No fisherman assigned to order.' };
+          }
+
+          // Move advance from pending_balance to balance
+          const walRes = await client.query(
+            `INSERT INTO wallets (user_id, role, balance, pending_balance, currency)
+             VALUES ($1, 'fisherman', $2, 0.00, 'INR')
+             ON CONFLICT (user_id) DO UPDATE SET
+               pending_balance = GREATEST(0.00, wallets.pending_balance - $2),
+               balance = wallets.balance + $2,
+               updated_at = now()
+             RETURNING id, balance::float, pending_balance::float`,
+            [targetFishermanId, ord.advance_amount]
+          );
+          const fWal = walRes.rows[0];
+
+          await client.query(
+            `INSERT INTO wallet_transactions (
+              wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
+              reference_id, description, metadata
+            ) VALUES ($1, $2, $3, 'advance_release', $4, 'credit', 'completed', $5, $6, $7, $8)`,
+            [
+              fWal.id,
+              targetFishermanId,
+              ord.id,
+              ord.advance_amount,
+              fWal.balance,
+              ord.order_number,
+              `25% advance released upon order acceptance (${ord.order_number})`,
+              JSON.stringify({ order_number: ord.order_number }),
+            ]
+          );
+
+          await client.query(
+            `UPDATE orders SET advance_released_to_fisherman = true, updated_at = now() WHERE id = $1`,
+            [ord.id]
+          );
+
+          await client.query('COMMIT');
+          return { success: true, message: `Advance of ₹${ord.advance_amount} released to fisherman wallet!` };
+        } catch (e: any) {
+          await client.query('ROLLBACK');
+          warnFallback('Database releaseAdvanceToFisherman error:', e);
+          return { success: false, message: e.message };
+        } finally {
+          client.release();
+        }
+      }
+    } catch (err: any) {
+      warnFallback('Database releaseAdvanceToFisherman fallback:', err);
+    }
+
+    // Memory fallback
+    const memOrd = memDb.orders.find((o) => o.id === orderId || o.id === dbOrderId);
+    if (memOrd && memOrd.advance_amount && !memOrd.advance_released_to_fisherman) {
+      memOrd.advance_released_to_fisherman = true;
+      const fId = memOrd.fisherman_id || fishermanUserId;
+      if (fId) {
+        let fWal = memDb.wallets.find((w) => w.user_id === fId);
+        if (!fWal) {
+          fWal = { id: 'w_' + Date.now(), user_id: fId, role: 'fisherman', balance: 0, pending_balance: 0, currency: 'INR', is_active: true, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+          memDb.wallets.push(fWal);
+        }
+        fWal.pending_balance = Math.max(0, fWal.pending_balance - memOrd.advance_amount);
+        fWal.balance += memOrd.advance_amount;
+        memDb.walletTransactions.push({
+          id: 'tx_' + Date.now(),
+          wallet_id: fWal.id,
+          user_id: fId,
+          order_id: memOrd.id,
+          transaction_type: 'advance_release',
+          amount: memOrd.advance_amount,
+          direction: 'credit',
+          status: 'completed',
+          balance_after: fWal.balance,
+          reference_id: memOrd.order_number,
+          description: `25% advance released upon order acceptance (${memOrd.order_number})`,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+    return { success: true };
+  },
+
+  async refundAdvanceToCustomer(orderId: string, reason?: string): Promise<{ success: boolean; message?: string }> {
+    const dbOrderId = toDbId(orderId);
+    try {
+      const pool = getPgPool();
+      if (!isTestEnv && pool) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const ordRes = await client.query(
+            `SELECT id, order_number, user_id, fisherman_id, advance_amount::float, advance_payment_status, advance_released_to_fisherman, refund_status
+             FROM orders WHERE id = $1 OR id::text = $2 FOR UPDATE`,
+            [dbOrderId, orderId]
+          );
+          if (ordRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return { success: false, message: 'Order not found.' };
+          }
+          const ord = ordRes.rows[0];
+          if (!ord.advance_amount || ord.advance_amount <= 0 || ord.advance_payment_status !== 'paid') {
+            await client.query('COMMIT');
+            return { success: true, message: 'No paid advance to refund.' };
+          }
+          if (ord.refund_status === 'refunded') {
+            await client.query('COMMIT');
+            return { success: true, message: 'Advance already refunded.' };
+          }
+
+          // Reverse from fisherman if advance was assigned
+          if (ord.fisherman_id) {
+            if (ord.advance_released_to_fisherman) {
+              await client.query(
+                `UPDATE wallets SET balance = GREATEST(0.00, balance - $1), updated_at = now() WHERE user_id = $2`,
+                [ord.advance_amount, ord.fisherman_id]
+              );
+            } else {
+              await client.query(
+                `UPDATE wallets SET pending_balance = GREATEST(0.00, pending_balance - $1), updated_at = now() WHERE user_id = $2`,
+                [ord.advance_amount, ord.fisherman_id]
+              );
+            }
+          }
+
+          // Refund to customer wallet
+          const custWalRes = await client.query(
+            `UPDATE wallets SET balance = balance + $1, updated_at = now() WHERE user_id = $2
+             RETURNING id, balance::float`,
+            [ord.advance_amount, ord.user_id]
+          );
+          let custWal = custWalRes.rows[0];
+          if (!custWal) {
+            const insW = await client.query(
+              `INSERT INTO wallets (user_id, role, balance, pending_balance, currency)
+               VALUES ($1, 'customer', $2, 0.00, 'INR')
+               RETURNING id, balance::float`,
+              [ord.user_id, ord.advance_amount]
+            );
+            custWal = insW.rows[0];
+          }
+
+          // Record customer refund ledger entry
+          await client.query(
+            `INSERT INTO wallet_transactions (
+              wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
+              reference_id, description, metadata
+            ) VALUES ($1, $2, $3, 'advance_refund', $4, 'credit', 'completed', $5, $6, $7, $8)`,
+            [
+              custWal.id,
+              ord.user_id,
+              ord.id,
+              ord.advance_amount,
+              custWal.balance,
+              ord.order_number,
+              `Refund of 25% advance for order (${ord.order_number}): ${reason || 'Order cancelled'}`,
+              JSON.stringify({ reason: reason || 'cancellation' }),
+            ]
+          );
+
+          // Update order refund status
+          await client.query(
+            `UPDATE orders SET refund_amount = $1, refund_status = 'refunded', advance_payment_status = 'refunded', updated_at = now() WHERE id = $2`,
+            [ord.advance_amount, ord.id]
+          );
+
+          await client.query('COMMIT');
+          return { success: true, message: `Refunded ₹${ord.advance_amount} advance to customer demo wallet.` };
+        } catch (e: any) {
+          await client.query('ROLLBACK');
+          warnFallback('Database refundAdvanceToCustomer error:', e);
+          return { success: false, message: e.message };
+        } finally {
+          client.release();
+        }
+      }
+    } catch (err: any) {
+      warnFallback('Database refundAdvanceToCustomer fallback:', err);
+    }
+
+    // Memory fallback
+    const memOrd = memDb.orders.find((o) => o.id === orderId || o.id === dbOrderId);
+    if (memOrd && memOrd.advance_amount && memOrd.refund_status !== 'refunded') {
+      memOrd.refund_amount = memOrd.advance_amount;
+      memOrd.refund_status = 'refunded';
+      memOrd.advance_payment_status = 'refunded';
+      const cWal = memDb.wallets.find((w) => w.user_id === memOrd.user_id);
+      if (cWal) {
+        cWal.balance += memOrd.advance_amount;
+        memDb.walletTransactions.push({
+          id: 'tx_ref_' + Date.now(),
+          wallet_id: cWal.id,
+          user_id: memOrd.user_id,
+          order_id: memOrd.id,
+          transaction_type: 'advance_refund',
+          amount: memOrd.advance_amount,
+          direction: 'credit',
+          status: 'completed',
+          balance_after: cWal.balance,
+          reference_id: memOrd.order_number,
+          description: `Refund of 25% advance for order (${memOrd.order_number})`,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      if (memOrd.fisherman_id) {
+        const fWal = memDb.wallets.find((w) => w.user_id === memOrd.fisherman_id);
+        if (fWal) {
+          if (memOrd.advance_released_to_fisherman) {
+            fWal.balance = Math.max(0, Math.round((fWal.balance - memOrd.advance_amount) * 100) / 100);
+          } else {
+            fWal.pending_balance = Math.max(0, Math.round((fWal.pending_balance - memOrd.advance_amount) * 100) / 100);
+          }
+        }
+      }
+    }
+    return { success: true };
+  },
+
+  async payRemainingBalanceWithWallet(orderId: string, customerUserId: string): Promise<{ success: boolean; order?: Order; message?: string }> {
+    const dbOrderId = toDbId(orderId);
+    const dbUserId = toDbId(customerUserId);
+    try {
+      const pool = getPgPool();
+      if (!isTestEnv && pool) {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const ordRes = await client.query(
+            `SELECT id, order_number, user_id, remaining_amount::float, remaining_payment_status, remaining_payment_method
+             FROM orders WHERE id = $1 OR id::text = $2 FOR UPDATE`,
+            [dbOrderId, orderId]
+          );
+          if (ordRes.rows.length === 0) {
+            await client.query('ROLLBACK');
+            return { success: false, message: 'Order not found.' };
+          }
+          const ord = ordRes.rows[0];
+          if (ord.user_id !== dbUserId && ord.user_id !== customerUserId) {
+            await client.query('ROLLBACK');
+            return { success: false, message: 'Unauthorized. You can only pay for your own orders.' };
+          }
+          if (ord.remaining_payment_status === 'paid') {
+            await client.query('COMMIT');
+            const currentOrd = await this.getOrderById(orderId);
+            return { success: true, order: currentOrd || undefined, message: 'Remaining balance has already been paid.' };
+          }
+          const amountDue = ord.remaining_amount || 0;
+          if (amountDue <= 0) {
+            await client.query('COMMIT');
+            const currentOrd = await this.getOrderById(orderId);
+            return { success: true, order: currentOrd || undefined, message: 'No remaining amount due.' };
+          }
+
+          // Check customer wallet
+          const walRes = await client.query(
+            `SELECT id, balance::float FROM wallets WHERE user_id = $1 FOR UPDATE`,
+            [dbUserId]
+          );
+          const custWal = walRes.rows[0];
+          if (!custWal || custWal.balance < amountDue) {
+            const avail = custWal ? custWal.balance : 0;
+            await client.query('ROLLBACK');
+            return {
+              success: false,
+              message: `Insufficient demo wallet balance. Required: ₹${amountDue}, Available: ₹${avail}. Please add demo funds.`,
+            };
+          }
+
+          const newCustBalance = Math.round((custWal.balance - amountDue) * 100) / 100;
+          await client.query(
+            `UPDATE wallets SET balance = $1, updated_at = now() WHERE id = $2`,
+            [newCustBalance, custWal.id]
+          );
+
+          await client.query(
+            `INSERT INTO wallet_transactions (
+              wallet_id, user_id, order_id, transaction_type, amount, direction, status, balance_after,
+              reference_id, description, metadata
+            ) VALUES ($1, $2, $3, 'remaining_payment', $4, 'debit', 'completed', $5, $6, $7, $8)`,
+            [
+              custWal.id,
+              dbUserId,
+              ord.id,
+              amountDue,
+              newCustBalance,
+              ord.order_number,
+              `Remaining 75% payment for order ${ord.order_number}`,
+              JSON.stringify({ order_number: ord.order_number }),
+            ]
+          );
+
+          await client.query(
+            `UPDATE orders SET
+              remaining_payment_method = 'wallet',
+              remaining_payment_status = 'paid',
+              payment_status = 'success',
+              updated_at = now()
+             WHERE id = $1`,
+            [ord.id]
+          );
+
+          await client.query('COMMIT');
+          const updated = await this.getOrderById(orderId);
+          return { success: true, order: updated || undefined, message: `Successfully paid remaining ₹${amountDue} using Demo Wallet!` };
+        } catch (e: any) {
+          await client.query('ROLLBACK');
+          warnFallback('Database payRemainingBalanceWithWallet error:', e);
+          return { success: false, message: e.message };
+        } finally {
+          client.release();
+        }
+      }
+    } catch (err: any) {
+      warnFallback('Database payRemainingBalanceWithWallet fallback:', err);
+    }
+
+    // Memory fallback
+    const memOrd = memDb.orders.find((o) => o.id === orderId || o.id === dbOrderId);
+    if (!memOrd) return { success: false, message: 'Order not found.' };
+    const due = memOrd.remaining_amount || 0;
+    const cWal = memDb.wallets.find((w) => w.user_id === customerUserId || w.user_id === dbUserId);
+    if (!cWal || cWal.balance < due) {
+      return { success: false, message: 'Insufficient wallet balance.' };
+    }
+    cWal.balance -= due;
+    memOrd.remaining_payment_method = 'wallet';
+    memOrd.remaining_payment_status = 'paid';
+    memOrd.payment_status = 'success';
+    return { success: true, order: memOrd, message: 'Paid via wallet.' };
+  },
+
+  async getAllWalletsAndLedger(limit: number = 100): Promise<{
+    wallets: (Wallet & { email?: string; full_name?: string })[];
+    recentTransactions: WalletTransaction[];
+    stats: { totalCustomerBalance: number; totalFishermanBalance: number; totalPendingAdvance: number };
+  }> {
+    try {
+      const walletsRows = await queryDb(
+        `SELECT w.id, w.user_id, w.role, w.balance::float, w.pending_balance::float, w.currency, w.is_active, w.created_at, w.updated_at,
+                p.email, p.full_name
+         FROM wallets w
+         LEFT JOIN profiles p ON w.user_id = p.id
+         ORDER BY w.updated_at DESC`
+      );
+      const txRows = await queryDb(
+        `SELECT id, wallet_id, user_id, order_id, transaction_type, amount::float, direction,
+                status, balance_after::float, reference_id, idempotency_key, description, metadata, created_at
+         FROM wallet_transactions
+         ORDER BY created_at DESC
+         LIMIT $1`,
+        [limit]
+      );
+
+      let totalCust = 0;
+      let totalFish = 0;
+      let totalPend = 0;
+      for (const w of walletsRows) {
+        if (w.role === 'customer') totalCust += Number(w.balance || 0);
+        if (w.role === 'fisherman') totalFish += Number(w.balance || 0);
+        totalPend += Number(w.pending_balance || 0);
+      }
+
+      return {
+        wallets: walletsRows,
+        recentTransactions: txRows,
+        stats: {
+          totalCustomerBalance: Math.round(totalCust * 100) / 100,
+          totalFishermanBalance: Math.round(totalFish * 100) / 100,
+          totalPendingAdvance: Math.round(totalPend * 100) / 100,
+        },
+      };
+    } catch (err: any) {
+      warnFallback('Database getAllWalletsAndLedger fallback:', err);
+    }
+    return {
+      wallets: memDb.wallets as any,
+      recentTransactions: memDb.walletTransactions.slice(0, limit),
+      stats: { totalCustomerBalance: 0, totalFishermanBalance: 0, totalPendingAdvance: 0 },
+    };
   },
 };

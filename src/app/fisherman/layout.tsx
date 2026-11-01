@@ -19,6 +19,7 @@ import {
   PlusCircle,
   RefreshCw,
   User,
+  Wallet,
 } from 'lucide-react';
 
 export default function FishermanLayout({ children }: { children: React.ReactNode }) {
@@ -157,6 +158,7 @@ export default function FishermanLayout({ children }: { children: React.ReactNod
     { href: '/fisherman/products/new', label: 'Add Catch', icon: PlusCircle },
     { href: '/fisherman/products', label: 'My Catches', icon: Fish },
     { href: '/fisherman/orders', label: 'Orders', icon: ShoppingBag },
+    { href: '/fisherman/wallet', label: 'Demo Wallet', icon: Wallet },
     { href: '/fisherman/reviews', label: 'Reviews', icon: Star },
     { href: '/fisherman/settings', label: 'Profile', icon: User },
   ];

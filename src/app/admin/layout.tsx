@@ -20,6 +20,7 @@ import {
   ArrowLeft,
   Truck,
   Anchor,
+  Wallet,
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: 'Categories', href: '/admin/categories', icon: Layers },
     { name: 'Inventory & Batches', href: '/admin/inventory', icon: Boxes },
     { name: 'Customers', href: '/admin/customers', icon: Users },
+    { name: 'Marketplace Wallets', href: '/admin/wallets', icon: Wallet },
     { name: 'Coupons & Promos', href: '/admin/coupons', icon: Tag },
     { name: 'Delivery Zones & Fees', href: '/admin/delivery-zones', icon: MapPin },
     { name: 'Review Moderation', href: '/admin/reviews', icon: Star },

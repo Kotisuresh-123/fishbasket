@@ -124,7 +124,14 @@ export async function POST(request: Request) {
 
     if (!result.success) {
       return NextResponse.json(
-        { success: false, message: result.message || 'Failed to place order.' },
+        {
+          success: false,
+          errorType: (result as any).errorType,
+          requiredAdvance: (result as any).requiredAdvance,
+          availableBalance: (result as any).availableBalance,
+          shortfall: (result as any).shortfall,
+          message: result.message || 'Failed to place order.',
+        },
         { status: 400 }
       );
     }
